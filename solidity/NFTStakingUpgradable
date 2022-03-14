@@ -53,9 +53,9 @@ contract NFTStakingUpgradable{
     bool isActivated;
     uint StakeFactor;
 
-//// Additional variables that are not part of the core contract
+//// Additional variables that are not part of the core contract go here:
 
-    bool Withdraws = false;
+
 
 ////The Activate function tells the contract what the heck the NFT and token addresses are, plus the stake factor, which tells the contract how many tokens to give per block.
 ////it has to be called or else the entire contract wont work
@@ -122,7 +122,6 @@ contract NFTStakingUpgradable{
     function Withdraw(uint TokenID) public{
         
         require(isActivated = true, "Contract has not been activated yet, call the Activate function");
-        require(Withdraws = true, "Withdraws are not enabled!");
 
         uint LocalTime;
         uint Unclaimed;
@@ -229,11 +228,8 @@ contract NFTStakingUpgradable{
 //// Additional functions that are not part of the core functionality, if you add anything, please add it here ////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function ToggleWithdraw(bool TrueOrFalse) public {
 
-        Withdraws = TrueOrFalse;
 
-    }
 
 }
     
