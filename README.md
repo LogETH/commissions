@@ -10,4 +10,6 @@ You are free use these contracts yourself, but make sure to follow the rules of 
 # How to commission a contract:
 If you need a contract coded, i'm your guy!
 
+The only thing I ask is for you to explain exactly what you want, asking me to create an "NFT" doesn't really mean anything, a contract has buttons and logic and you have to tell me what exactly you want those buttons to do or give me a general idea on what you want it to be. 
+
 To request a commission, please DM me on discord at Log#7730
