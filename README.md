@@ -1,2 +1,2 @@
 # contracts
-Solidity Contracts that I have coded
+If you need a contract coded, i'm your guy!
