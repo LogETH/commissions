@@ -1,3 +1,4 @@
+![idk](LogBanner.png)
 # What is this? 
 This is a repository containing contracts people have commissioned me to code.
 Every contract is fully explained with comments, error messages, and easy syntax. Someone who has no expierence with coding should be able to understand the logic behind my contracts. So check em out!
@@ -10,4 +11,3 @@ You are free use these contracts yourself, but make sure to follow the rules of 
 If you need a contract coded, i'm your guy!
 
 To request a commission, please DM me on discord at Log#7730
-
