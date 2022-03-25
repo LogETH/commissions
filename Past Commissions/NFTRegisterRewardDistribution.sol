@@ -23,7 +23,7 @@ pragma solidity >=0.7.0 <0.9.0;
 contract NFTRegisterRewardDistribution{
 
 //// The constructor will execute when the contract is deployed, replace the address(0) with the token and NFT.
-//// You can change the token and the NFT later using EditNFT() and EditToken()
+//// You can change the token and the NFT later using EditNFT() and EditToken().
 
 //// The person who deploys the contract is the admin. The admin is hardcoded into the contract, it cannot be changed.
 
