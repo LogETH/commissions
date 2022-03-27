@@ -5,7 +5,7 @@ Every contract is fully explained with comments, error messages, and easy syntax
 
 Feel free to deploy some of these and test them yourself! All contracts are useable from an etherscan interface.
 
-You are free use these contracts yourself, but make sure to follow the rules of the license I put in each one of them. There is a TL;DR of the license at the top of every contract.
+You are free to use these contracts yourself, but make sure to follow the rules of the license I put in each one of them. There is a TL;DR of the license at the top of every contract.
 
 # How to commission a contract:
 If you need a contract coded, i'm your guy!
