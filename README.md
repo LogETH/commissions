@@ -1,7 +1,7 @@
 ![idk](LogBanner.png)
 # What is this? 
 This is a repository containing contracts people have commissioned me to code.
-Every contract is fully explained with comments, error messages, and easy syntax. Someone who has no expierence with coding should be able to understand the logic behind my contracts. So check em out!
+Every contract is fully explained with comments, error messages, and easy syntax. Someone who has no experience with coding should be able to understand the logic behind my contracts. So check em out!
 
 Feel free to deploy some of these and test them yourself! All contracts are useable from an etherscan interface.
 
