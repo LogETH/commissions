@@ -52,5 +52,20 @@ interface rari{
 interface curve{
 
 
+}
 
+interface compound {
+
+    function mint(uint256) external returns (uint256);
+    function exchangeRateCurrent() external returns (uint256);
+    function supplyRatePerBlock() external returns (uint256);
+    function redeem(uint) external returns (uint);
+    function redeemUnderlying(uint) external returns (uint);
+}
+
+interface ERC20{
+    
+    function transferFrom(address, address, uint256) external;
+    function transfer(address, uint256) external;
+    function balanceOf(address) external view returns(uint);
 }
