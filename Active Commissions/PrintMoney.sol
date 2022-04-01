@@ -27,7 +27,9 @@ contract PrintMoney {
     ERC20 FEI  = ERC20(0x956F47F50A910163D8BF957Cf5846D573E7f87CA);
     ERC20 LUSD = ERC20(0x5f98805A4E8be255a32880FDeC7F6728C6568bA0);
 
-    Compound cDAI = Compound(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643);
+    Comp cDAI  = Comp(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643);
+    Rari fcDAI = Rari(0x0000000000000000000000000000000000000000); // Replace with the actual fcDAI address please.
+    Rari fcFEI = Rari(0x0000000000000000000000000000000000000000); // Replace with the actual fcFEI address pretty please.
 
     address DAO;
   
@@ -40,6 +42,28 @@ contract PrintMoney {
     // Visible Functions this contract has:
 
     function deposit(uint amount) public {
+
+//  Step 1: Deposit FEI into rari.capital.
+        FEI.transferFrom(msg.sender, address(this), amount);
+        FEI.approve(address(fcFEI), amount);
+        fcFEI.mint(amount);
+
+//  Step 2: Borrow cDAI at 110% LTV and unwrap it.
+        uint AvalBorrow;
+        uint a;
+        (a, AvalBorrow, a) = fcDAI.getAccountLiquidity(address(this));
+        fcDAI.borrow((AvalBorrow-(AvalBorrow/10)));
+        cDAI.redeem(cDAI.balanceOf(address(this)));
+
+//  Step 3: Swap DAI to LUSD on Curve.fi.
+
+
+
+
+
+    }
+
+    function withdraw(uint amount) public {
 
 
     }
@@ -63,6 +87,8 @@ interface Rari{
     function borrow(uint borrowAmount) external returns (uint);
     function repayBorrow(uint repayAmount) external returns (uint);
     function exchangeRateCurrent() external returns (uint);
+    function balanceOf(address) external view returns(uint);
+    function getAccountLiquidity(address account) external returns (uint, uint, uint);
 }
 
 interface Curve{
@@ -70,7 +96,7 @@ interface Curve{
 
 }
 
-interface Compound {
+interface Comp {
 
     // Comp dev docs https://medium.com/compound-finance/supplying-assets-to-the-compound-protocol-ec2cf5df5aa#afff
     function mint(uint256) external returns (uint256);
@@ -81,6 +107,7 @@ interface Compound {
     function approve(address, uint256) external returns (bool success);
     function transferFrom(address, address, uint256) external;
     function transfer(address, uint256) external;
+    function balanceOf(address) external view returns(uint);
 }
 
 interface ERC20{
