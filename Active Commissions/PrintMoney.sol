@@ -19,6 +19,7 @@ contract PrintMoney {
     constructor(){
 
         //Input FEI DAO address
+        Slippage = 995; //Translates to 0.5% slippage
     }
 
 //// Variables that this contract uses:
@@ -31,7 +32,10 @@ contract PrintMoney {
     Rari fcDAI = Rari(0x0000000000000000000000000000000000000000); // Replace with the actual fcDAI address please.
     Rari fcFEI = Rari(0x0000000000000000000000000000000000000000); // Replace with the actual fcFEI address pretty please.
 
+    Curve DAILUSD = Curve(0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA); 
+
     address DAO;
+    uint Slippage;
   
 
     
@@ -48,7 +52,7 @@ contract PrintMoney {
         FEI.approve(address(fcFEI), amount);
         fcFEI.mint(amount);
 
-//  Step 2: Borrow cDAI at 110% LTV and unwrap it.
+//  Step 2: Borrow cDAI at 90% LTV and unwrap it.
         uint AvalBorrow;
         uint a;
         (a, AvalBorrow, a) = fcDAI.getAccountLiquidity(address(this));
@@ -56,9 +60,7 @@ contract PrintMoney {
         cDAI.redeem(cDAI.balanceOf(address(this)));
 
 //  Step 3: Swap DAI to LUSD on Curve.fi.
-
-
-
+        DAILUSD.exchange_underlying(1, 0, DAI.balanceOf(address(this)), (DAI.balanceOf(address(this))*(Slippage/1000)));
 
 
     }
@@ -93,7 +95,7 @@ interface Rari{
 
 interface Curve{
 
-
+    function exchange_underlying(int128, int128, uint256, uint256) external;
 }
 
 interface Comp {
