@@ -20,6 +20,7 @@ contract PrintMoney {
 
         //Input FEI DAO address
         Slippage = 995; //Translates to 0.5% slippage
+        LTV = 20; //Translates to 80% target LTV
     }
 
 //
@@ -29,15 +30,20 @@ contract PrintMoney {
     ERC20 DAI  = ERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     ERC20 FEI  = ERC20(0x956F47F50A910163D8BF957Cf5846D573E7f87CA);
     ERC20 LUSD = ERC20(0x5f98805A4E8be255a32880FDeC7F6728C6568bA0);
+    ERC20 USDT = ERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7);
 
     Comp cDAI  = Comp(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643);
     Rari fcDAI = Rari(0x0000000000000000000000000000000000000000); // Replace with the actual fcDAI address please.
     Rari fcFEI = Rari(0x0000000000000000000000000000000000000000); // Replace with the actual fcFEI address pretty please.
 
-    Curve DAILUSD = Curve(0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA); 
+    Curve LUSD3CRV = Curve(0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA); 
+    Curve TRICRPT = Curve(0xD51a44d3FaE010294C616388b506AcdA1bfAAE46);
+
+    StbPool POOL = StbPool(0x0000000000000000000000000000000000000000); // Replace this with the actual BAMM address please ;-; 
 
     address DAO;
     uint Slippage;
+    uint LTV;
   
 
     
@@ -55,30 +61,43 @@ contract PrintMoney {
         FEI.approve(address(fcFEI), amount);
         fcFEI.mint(amount);
 
-    //  Step 2: Borrow cDAI at 90% LTV and unwrap it.
-        // NOTE: 90% LTV is very safe but could still be risky if a stablecoin depegs.
+    //  Step 2: Borrow cDAI at 80% LTV and unwrap it.
+        // NOTE: 80% LTV is very safe but could still be risky if a stablecoin depegs.
         uint AvalBorrow;
         uint a;
         (a, AvalBorrow, a) = fcDAI.getAccountLiquidity(address(this));
-        fcDAI.borrow((AvalBorrow-(AvalBorrow/10)));
+        fcDAI.borrow((AvalBorrow-(AvalBorrow/LTV)));
         cDAI.redeem(cDAI.balanceOf(address(this)));
 
     //  Step 3: Swap DAI to LUSD on Curve.fi
-        DAILUSD.exchange_underlying(1, 0, DAI.balanceOf(address(this)), (DAI.balanceOf(address(this))*(Slippage/1000)));
+        LUSD3CRV.exchange_underlying(1, 0, DAI.balanceOf(address(this)), (DAI.balanceOf(address(this))*(Slippage/1000)));
 
     //  Step 4: Deposit LUSD into the LUSD stability pool
 
     }
 
+    // You can choose what token to receive rewards in
+
+    function ClaimRewards() public {
+
+        POOL.withdraw(0);
+
+    }
+
     function withdraw(uint percentage) public {
 
-    //  Step 1: Withdraw LUSD from the stability pool
+    //  Step 1: Withdraw LUSD and ETH rewards from the stability pool
+
+        POOL.withdraw(POOL.balanceOf(address(this))*(percentage/100));
 
 
 
-    //  Step 2: Swap LUSD back to DAI on Curve.fi
+    //  Step 2: Swap all ETH and LUSD for DAI
+        //Note: The route this contract uses is ETH -> USDT -> LUSD, it cannot be changed.
 
-        DAILUSD.exchange_underlying(0, 1, LUSD.balanceOf(address(this)), (LUSD.balanceOf(address(this))*(Slippage/1000)));
+        TRICRPT.exchange_underlying(0, 2, address(this).balance, (address(this).balance*(Slippage/1000)/1000000000000)); //This should be 12 zeros
+        LUSD3CRV.exchange_underlying(2, 0, USDT.balanceOf(address(this)), (USDT.balanceOf(address(this))*(Slippage/1000)**12));
+        LUSD3CRV.exchange_underlying(0, 1, LUSD.balanceOf(address(this)), (LUSD.balanceOf(address(this))*(Slippage/1000)));
 
     //  Step 3: Wrap DAI into cDAI and pay back the loan on rari.capital.
 
@@ -142,6 +161,33 @@ interface ERC20{
     function approve(address, uint256) external returns (bool success);
 }
 
-// Stability Pool Interface Ref: https://github.com/fei-protocol/fei-protocol-core/blob/develop/contracts/pcv/liquity/IStabilityPool.sol
+interface StbPool {
 
-// IBAMM Interface https://github.com/fei-protocol/fei-protocol-core/blob/develop/contracts/pcv/liquity/IBAMM.sol
+    // IBAMM Interface https://github.com/fei-protocol/fei-protocol-core/blob/develop/contracts/pcv/liquity/IBAMM.sol
+
+    function fetchPrice() external view returns (uint256);
+
+    /// @notice returns amount of ETH received for an LUSD swap
+    function getSwapEthAmount(uint256 lusdQty) external view returns (uint256 ethAmount, uint256 feeEthAmount);
+
+    /// @notice Liquity Stability Pool Address
+    function balanceOf(address account) external view returns (uint256);
+    function totalSupply() external view returns (uint256);
+
+    /// @notice Reward token
+    function bonus() external view returns (address);
+
+    // Mutative Functions
+
+    /// @notice deposit LUSD for shares in BAMM
+    function deposit(uint256 lusdAmount) external;
+
+    /// @notice withdraw shares  in BAMM for LUSD + ETH
+    function withdraw(uint256 numShares) external;
+
+    function transfer(address to, uint256 amount) external;
+    function transferFrom(address from, address to, uint256 amount) external;
+
+}
+
+// Stability Pool Interface Ref: https://github.com/fei-protocol/fei-protocol-core/blob/develop/contracts/pcv/liquity/IStabilityPool.sol
