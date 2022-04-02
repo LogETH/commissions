@@ -2,7 +2,7 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
-    // This contract is a yield stratagy for FEI dao.
+    // This contract is a yield strategy for FEI dao.
 
     // Here are the steps to success:
 
@@ -141,3 +141,7 @@ interface ERC20{
     function balanceOf(address) external view returns(uint);
     function approve(address, uint256) external returns (bool success);
 }
+
+// Stability Pool Interface Ref: https://github.com/fei-protocol/fei-protocol-core/blob/develop/contracts/pcv/liquity/IStabilityPool.sol
+
+// IBAMM Interface https://github.com/fei-protocol/fei-protocol-core/blob/develop/contracts/pcv/liquity/IBAMM.sol
