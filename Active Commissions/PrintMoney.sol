@@ -12,6 +12,10 @@ pragma solidity >=0.7.0 <0.9.0;
     // 4) Swap DAI to LUSD using Curve.fi
     // 5) Deposit LUSD into the liquity stability pool
 
+// IMPORTANT:
+// In order for this contract to work, the tokens FEI and BAMM must be approved for use on this contract.
+// The FEI/cDAI rari market must also be intialized with sufficent liquidity before this contract is deployed
+
     // now to the code:
 
 contract PrintMoney {
@@ -23,9 +27,9 @@ contract PrintMoney {
         LTV = 20; //Translates to 80% target LTV
     }
 
-//
-//// Variables that this contract uses:
-//
+//                                        //
+//// Variables that this contract uses: ////
+//                                        //
 
     ERC20 DAI  = ERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     ERC20 FEI  = ERC20(0x956F47F50A910163D8BF957Cf5846D573E7f87CA);
@@ -37,23 +41,17 @@ contract PrintMoney {
     Rari fcFEI = Rari(0x0000000000000000000000000000000000000000); // Replace with the actual fcFEI address pretty please.
 
     Curve LUSD3CRV = Curve(0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA); 
-    Curve TRICRPT = Curve(0xD51a44d3FaE010294C616388b506AcdA1bfAAE46);
 
     StbPool POOL = StbPool(0x0000000000000000000000000000000000000000); // Replace this with the actual BAMM address please ;-; 
 
     address DAO;
     uint Slippage;
     uint LTV;
-  
 
-    
+//                                                //
+//// Visible Functions that this contract uses: ////
+//                                                //
 
-    // This contract zaps this yield stratagy instantly in one transaction.
-    // it can also reverse the entire stratagy or a percentage of it in one transaction.
-
-//
-// Visible Functions this contract has:
-//
     function deposit(uint amount) public {
 
     //  Step 1: Deposit FEI into rari.capital.
@@ -72,39 +70,52 @@ contract PrintMoney {
     //  Step 3: Swap DAI to LUSD on Curve.fi
         LUSD3CRV.exchange_underlying(1, 0, DAI.balanceOf(address(this)), (DAI.balanceOf(address(this))*(Slippage/1000)));
 
-    //  Step 4: Deposit LUSD into the LUSD stability pool
+    //  Step 4: Deposit all LUSD held by this address into the LUSD stability pool
+        POOL.deposit(LUSD.balanceOf(address(this)));
+
+    //  Step 5: Send the LUSD receipt tokens to the DAO treasury
+        POOL.transfer(DAO, POOL.balanceOf(address(this)));
 
     }
 
-    // You can choose what token to receive rewards in
+    // Sweep ETH from this address to the DAO address
 
-    function ClaimRewards() public {
+    function Sweep() public payable {
 
-        POOL.withdraw(0);
+        (bool sent, bytes memory data) = DAO.call{value: address(this).balance}("");
+        require(sent, "Failed to send Ether");
 
     }
 
     function withdraw(uint percentage) public {
 
-    //  Step 1: Withdraw LUSD and ETH rewards from the stability pool
+    //  Step 1: Get the receipt tokens from the DAO and withdraw LUSD and ETH rewards from the stability pool
 
-        POOL.withdraw(POOL.balanceOf(address(this))*(percentage/100));
+        POOL.transferFrom(DAO, address(this), (POOL.balanceOf(DAO)*percentage/100));
+        POOL.withdraw(POOL.balanceOf(address(this)));
 
 
 
-    //  Step 2: Swap all ETH and LUSD for DAI
-        //Note: The route this contract uses is ETH -> USDT -> LUSD, it cannot be changed.
+    //  Step 2: Swap all LUSD for DAI
 
-        TRICRPT.exchange_underlying(0, 2, address(this).balance, (address(this).balance*(Slippage/1000)/1000000000000)); //This should be 12 zeros
-        LUSD3CRV.exchange_underlying(2, 0, USDT.balanceOf(address(this)), (USDT.balanceOf(address(this))*(Slippage/1000)**12));
         LUSD3CRV.exchange_underlying(0, 1, LUSD.balanceOf(address(this)), (LUSD.balanceOf(address(this))*(Slippage/1000)));
 
     //  Step 3: Wrap DAI into cDAI and pay back the loan on rari.capital.
 
         DAI.approve(address(cDAI), DAI.balanceOf(address(this)));
         cDAI.mint(DAI.balanceOf(address(this)));
-        cDAI.approve(address(cDAI), cDAI.balanceOf(address(this)));
-        fcDAI.repayBorrow(cDAI.balanceOf(address(this)));
+        cDAI.approve(address(fcDAI), cDAI.balanceOf(address(this)));
+
+        if(cDAI.balanceOf(address(this)) <= fcDAI.borrowBalanceCurrent(address(this))){
+
+            fcDAI.repayBorrow(cDAI.balanceOf(address(this)));
+        }
+
+        else{
+
+            fcDAI.repayBorrow(fcDAI.borrowBalanceCurrent(address(this)));
+        }
+
 
     // Step 4: Withdraw a safe amount of FEI (or all if percentage is 100%) and return it to its owner.
 
@@ -132,6 +143,7 @@ interface Rari{
     function exchangeRateCurrent() external returns (uint);
     function balanceOf(address) external view returns(uint);
     function getAccountLiquidity(address account) external returns (uint, uint, uint);
+    function borrowBalanceCurrent(address account) external returns (uint);
 }
 
 interface Curve{
