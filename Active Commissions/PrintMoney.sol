@@ -42,7 +42,7 @@ contract PrintMoney {
 
     Curve LUSD3CRV = Curve(0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA); 
 
-    StbPool POOL = StbPool(0x0000000000000000000000000000000000000000); // Replace this with the actual BAMM address please ;-; 
+    StbPool POOL = StbPool(0x0d3AbAA7E088C2c82f54B2f47613DA438ea8C598);
 
     address DAO;
     uint Slippage;
