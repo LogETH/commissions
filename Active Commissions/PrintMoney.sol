@@ -132,6 +132,7 @@ contract PrintMoney {
     // Step 4: Withdraw enough FEI to keep the LTV at the target amount and return it to the DAO treasury.
 
         // im going to have to use some complex math equation to calculate this.. one sec
+        // quick mahs.
 
         if(percentage == 100){
 
@@ -147,11 +148,13 @@ contract PrintMoney {
 
         uint FULL = fcDAI.borrowBalanceCurrent(address(this)) + AvalBorrow;
 
-        FULL = FULL - FULL/LTV;
+        uint CurrentLTV = (FULL/fcDAI.borrowBalanceCurrent(address(this)))*100;
 
-        uint amount = FULL - fcDAI.borrowBalanceCurrent(address(this)) + AvalBorrow;
+        uint x = LTV-CurrentLTV;
 
-        fcFEI.redeemUnderlying(amount);
+        require(CurrentLTV < LTV, "The local balance is not enough to repay the loan, try withdrawing a higher percentage or 100%.")
+
+        fcFEI.redeem(fcFEI.balanceOf(address(this))*x/100);
 
         FEI.transfer(DAO, FEI.balanceOf(address(this)));
 
