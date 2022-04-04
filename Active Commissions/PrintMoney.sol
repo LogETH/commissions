@@ -24,8 +24,8 @@ contract PrintMoney {
     constructor(){
 
         DAO = 0x0000000000000000000000000000000000000000; //Input FEI DAO address
-        Slippage = 995; //Translates to 0.5% slippage (How much leeway should this contract leave)
-        LTV = 20; //Translates to 80% target LTV (How much leeway should this contract leave)
+        Slippage = 995; //Translates to 0.5% slippage for swapping DAI to LUSD and vise versa.
+        LTV = 80; //Translates to 80% target LTV for the cDAI loan.
     }
 
 //                                        //
@@ -55,8 +55,8 @@ contract PrintMoney {
     StbPool POOL = StbPool(0x0d3AbAA7E088C2c82f54B2f47613DA438ea8C598);
 
     address DAO;
-    uint Slippage;
-    uint LTV;
+    uint public Slippage;
+    uint public LTV;
 
 //                                                //
 //// Visible Functions that this contract uses: ////
@@ -75,7 +75,7 @@ contract PrintMoney {
         uint AvalBorrow;
         uint a;
         (a, AvalBorrow, a) = fcDAI.getAccountLiquidity(address(this));
-        fcDAI.borrow((AvalBorrow-(AvalBorrow/LTV)));
+        fcDAI.borrow((AvalBorrow-(CalcLTV(AvalBorrow))));
         cDAI.redeem(cDAI.balanceOf(address(this)));
 
     //  Step 3: Swap DAI to LUSD on Curve.fi
@@ -133,21 +133,42 @@ contract PrintMoney {
 
         // im going to have to use some complex math equation to calculate this.. one sec
 
-        fcFEI.redeemUnderlying();
+        if(percentage == 100){
 
+            fcFEI.redeem(fcFEI.balanceOf(address(this)));
+            FEI.transfer(DAO, FEI.balanceOf(address(this)));
+        }
 
+        else{
 
+        uint AvalBorrow;
+        uint a;
+        (a, AvalBorrow, a) = fcDAI.getAccountLiquidity(address(this));
+
+        uint FULL = fcDAI.borrowBalanceCurrent(address(this)) + AvalBorrow;
+
+        FULL = FULL - FULL/LTV;
+
+        uint amount = FULL - fcDAI.borrowBalanceCurrent(address(this)) + AvalBorrow;
+
+        fcFEI.redeemUnderlying(amount);
+
+        FEI.transfer(DAO, FEI.balanceOf(address(this)));
+
+        }
     }
     
     function EditLTV(uint TargetLTV) public {
 
         require(msg.sender == DAO, "Only the DAO can execute this function, not you dummy...");
+        require(TargetLTV <= 99, "You can't set the target LTV to 100% or higher, that would break this contract");
         LTV = TargetLTV;
     }
 
     function EditSlippage(uint TargetSlippage) public {
 
         require(msg.sender == DAO, "Only the DAO can execute this function, not you dummy...");
+        require(TargetSlippage <= 99, "You can't set the slippage to 5%");
         Slippage = TargetSlippage;
     }
 
@@ -155,6 +176,16 @@ contract PrintMoney {
 // Internal and External Functions this contract uses:
 // (msg.sender SHOULD NOT be used/assumed in any of these functions.)
 
+    function CalcLTV(uint AvalBorrow) internal view returns(uint){
+
+
+        int iLTV = int(LTV) - 100;
+        uint uLTV = uint(iLTV*-1);
+
+        AvalBorrow = AvalBorrow*(uLTV/100);
+
+        return AvalBorrow;
+    }
 
 }
 
