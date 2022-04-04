@@ -23,7 +23,7 @@ contract PrintMoney {
 
     constructor(){
 
-        DAO = 0x0000000000000000000000000000000000000000; //Input FEI DAO address
+        DAO = 0xd51dbA7a94e1adEa403553A8235C302cEbF41a3c;
         Slippage = 995; //Translates to 0.5% slippage for swapping DAI to LUSD and vise versa.
         LTV = 80; //Translates to 80% target LTV for the cDAI loan.
     }
@@ -38,7 +38,7 @@ contract PrintMoney {
     ERC20 FEI  = ERC20(0x956F47F50A910163D8BF957Cf5846D573E7f87CA);
     ERC20 LUSD = ERC20(0x5f98805A4E8be255a32880FDeC7F6728C6568bA0);
     ERC20 USDT = ERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7);
-    ERC20 LQTY = ERC20(0x0000000000000000000000000000000000000000); // Replace with the actual LQTY address please.
+    ERC20 LQTY = ERC20(0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D);
 
     // cERC20 and fcERC20 tokens
 
