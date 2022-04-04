@@ -6,7 +6,7 @@ pragma solidity >=0.7.0 <0.9.0;
 
     // Here are the steps to success:
 
-    // 1) Borrow cDAI off of FEI from rari.capital
+    // 1) Borrow cDAI off of FEI from rari.capital        
     // 2) Unwrap cDAI to DAI using Compound
     // 3) Swap DAI to LUSD using Curve.fi
     // 4) Deposit LUSD into the liquity stability pool
@@ -72,10 +72,8 @@ contract PrintMoney {
         fcFEI.mint(amount);
 
     //  Step 2: Borrow cDAI at the target LTV and unwrap it.
-        uint AvalBorrow;
-        uint a;
-        (a, AvalBorrow, a) = fcDAI.getAccountLiquidity(address(this));
-        fcDAI.borrow((AvalBorrow-(CalcLTV(AvalBorrow))));
+
+        fcDAI.borrow(CalcDepositLTV());
         cDAI.redeem(cDAI.balanceOf(address(this)));
 
     //  Step 3: Swap DAI to LUSD on Curve.fi
@@ -86,6 +84,9 @@ contract PrintMoney {
     }
 
         // Sweep any excess ETH from this address to the DAO address, anyone can call it
+        // I know the compilier flags this as yellow but thats fine
+
+        // Remember, if its yellow, keep it mellow, if its red, bash your head.
 
     function Sweep() public payable {
 
@@ -140,24 +141,10 @@ contract PrintMoney {
             FEI.transfer(DAO, FEI.balanceOf(address(this)));
         }
 
-        else{
+        else {
 
-        uint AvalBorrow;
-        uint a;
-        (a, AvalBorrow, a) = fcDAI.getAccountLiquidity(address(this));
-
-        uint FULL = fcDAI.borrowBalanceCurrent(address(this)) + AvalBorrow;
-
-        uint CurrentLTV = (FULL/fcDAI.borrowBalanceCurrent(address(this)))*100;
-
-        uint x = LTV-CurrentLTV;
-
-        require(CurrentLTV < LTV, "The local balance is not enough to repay the loan, try withdrawing a higher percentage or 100%.")
-
-        fcFEI.redeem(fcFEI.balanceOf(address(this))*x/100);
-
-        FEI.transfer(DAO, FEI.balanceOf(address(this)));
-
+            fcFEI.redeem(CalcWithdrawLTV());
+            FEI.transfer(DAO, FEI.balanceOf(address(this)));
         }
     }
     
@@ -171,7 +158,7 @@ contract PrintMoney {
     function EditSlippage(uint TargetSlippage) public {
 
         require(msg.sender == DAO, "Only the DAO can execute this function, not you dummy...");
-        require(TargetSlippage <= 99, "You can't set the slippage to 5%");
+        require(TargetSlippage <= 50, "You can't set the slippage to over 5%, you will get front run when swapping and lose a shit ton of money.");
         Slippage = TargetSlippage;
     }
 
@@ -179,15 +166,57 @@ contract PrintMoney {
 // Internal and External Functions this contract uses:
 // (msg.sender SHOULD NOT be used/assumed in any of these functions.)
 
-    function CalcLTV(uint AvalBorrow) internal view returns(uint){
+    // Big math function (this took a while to figure out)
+    // This function calculates how much cDAI to borrow to peg the LTV at the set amount
+    //
+    // FULL = Maximum Borrow Balance
+    // LTV = Target LTV
+    // CurrentLTV = The current LTV ratio
+    // x = How much we have to raise the LTV to reach the target amount.
+    // If its impossible to reach the LTV with the contract's current funds, the function reverts.
 
+    function CalcDepositLTV() internal returns(uint){
 
-        int iLTV = int(LTV) - 100;
-        uint uLTV = uint(iLTV*-1);
+        uint AvalBorrow;
+        uint a;
+        (a, AvalBorrow, a) = fcDAI.getAccountLiquidity(address(this));
 
-        AvalBorrow = AvalBorrow*(uLTV/100);
+        uint FULL = fcDAI.borrowBalanceCurrent(address(this)) + AvalBorrow;
+        uint CurrentLTV = (FULL/fcDAI.borrowBalanceCurrent(address(this)))*100;
+
+        uint x = LTV-CurrentLTV;
+        require(CurrentLTV < LTV, "Your deposit is not enough to peg the LTV at the target %, try depositing a higher amount");
+
+        AvalBorrow *= (uint(x)/100);
 
         return AvalBorrow;
+    }
+
+    function CalcWithdrawLTV() internal returns(uint){
+
+        uint AvalBorrow;
+        uint a;
+        (a, AvalBorrow, a) = fcDAI.getAccountLiquidity(address(this));
+
+        uint FULL = fcDAI.borrowBalanceCurrent(address(this)) + AvalBorrow;
+        uint CurrentLTV = (FULL/fcDAI.borrowBalanceCurrent(address(this)))*100;
+
+        uint x = LTV-CurrentLTV;
+        require(CurrentLTV < LTV, "Your deposit is not enough to peg the LTV at the target %, try withdrawing a higher amount");
+
+        uint AvalWithdraw = fcFEI.balanceOf(address(this)) * (uint(x)/100);
+
+        return AvalWithdraw;
+
+    }
+
+    // Absolute value function cuz solidity doesn't have one
+
+    function abs(int num) internal pure returns(int){
+
+        if(num <= 0){num*=-1;}
+
+        return num;
     }
 
 }
