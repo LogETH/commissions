@@ -2,45 +2,55 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
-    // This contract is a yield strategy for FEI dao.
+// This contract is a yield strategy for FEI dao.
 
     // Here are the steps to success:
 
-    // 1) Deposit cDAI into Rari.capital 
-    // 2) Borrow cDAI off of FEI from rari.capital
-    // 3) Unwrap cDAI to DAI using Compound
-    // 4) Swap DAI to LUSD using Curve.fi
-    // 5) Deposit LUSD into the liquity stability pool
+    // 1) Borrow cDAI off of FEI from rari.capital
+    // 2) Unwrap cDAI to DAI using Compound
+    // 3) Swap DAI to LUSD using Curve.fi
+    // 4) Deposit LUSD into the liquity stability pool
 
 // IMPORTANT:
-// In order for this contract to work, the tokens FEI and BAMM must be approved for use on this contract.
+// In order for this contract to work, the tokens FEI, BAMM, and cDAI must be approved for use on this contract.
 // The FEI/cDAI rari market must also be intialized with sufficent liquidity before this contract is deployed
 
     // now to the code:
 
 contract PrintMoney {
 
+    // Settings that you can change before deploying
+
     constructor(){
 
-        //Input FEI DAO address
-        Slippage = 995; //Translates to 0.5% slippage
-        LTV = 20; //Translates to 80% target LTV
+        DAO = 0x0000000000000000000000000000000000000000; //Input FEI DAO address
+        Slippage = 995; //Translates to 0.5% slippage (How much leeway should this contract leave)
+        LTV = 20; //Translates to 80% target LTV (How much leeway should this contract leave)
     }
 
 //                                        //
 //// Variables that this contract uses: ////
 //                                        //
 
+    // ERC20 tokens
+
     ERC20 DAI  = ERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     ERC20 FEI  = ERC20(0x956F47F50A910163D8BF957Cf5846D573E7f87CA);
     ERC20 LUSD = ERC20(0x5f98805A4E8be255a32880FDeC7F6728C6568bA0);
     ERC20 USDT = ERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7);
+    ERC20 LQTY = ERC20(0x0000000000000000000000000000000000000000); // Replace with the actual LQTY address please.
+
+    // cERC20 and fcERC20 tokens
 
     Comp cDAI  = Comp(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643);
     Rari fcDAI = Rari(0x0000000000000000000000000000000000000000); // Replace with the actual fcDAI address please.
     Rari fcFEI = Rari(0x0000000000000000000000000000000000000000); // Replace with the actual fcFEI address pretty please.
 
+    // Curve swapping thingy
+
     Curve LUSD3CRV = Curve(0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA); 
+
+    // Liquity stability pool
 
     StbPool POOL = StbPool(0x0d3AbAA7E088C2c82f54B2f47613DA438ea8C598);
 
@@ -54,13 +64,14 @@ contract PrintMoney {
 
     function deposit(uint amount) public {
 
+        require(msg.sender == DAO, "Only the DAO can execute this function, not you dummy...");
+
     //  Step 1: Deposit FEI into rari.capital.
         FEI.transferFrom(msg.sender, address(this), amount);
         FEI.approve(address(fcFEI), amount);
         fcFEI.mint(amount);
 
-    //  Step 2: Borrow cDAI at 80% LTV and unwrap it.
-        // NOTE: 80% LTV is very safe but could still be risky if a stablecoin depegs.
+    //  Step 2: Borrow cDAI at the target LTV and unwrap it.
         uint AvalBorrow;
         uint a;
         (a, AvalBorrow, a) = fcDAI.getAccountLiquidity(address(this));
@@ -72,55 +83,74 @@ contract PrintMoney {
 
     //  Step 4: Deposit all LUSD held by this address into the LUSD stability pool
         POOL.deposit(LUSD.balanceOf(address(this)));
-
-    //  Step 5: Send the LUSD receipt tokens to the DAO treasury
-        POOL.transfer(DAO, POOL.balanceOf(address(this)));
-
     }
 
-    // Sweep ETH from this address to the DAO address
+        // Sweep any excess ETH from this address to the DAO address, anyone can call it
 
     function Sweep() public payable {
 
         (bool sent, bytes memory data) = DAO.call{value: address(this).balance}("");
         require(sent, "Failed to send Ether");
+    }
 
+        // Anyone can call claimRewards to transfer any LQTY rewards to the DAO
+
+    function claimRewards() public {
+
+        POOL.withdraw(0);
+        LQTY.transfer(DAO, LQTY.balanceOf(address(this)));
     }
 
     function withdraw(uint percentage) public {
 
-    //  Step 1: Get the receipt tokens from the DAO and withdraw LUSD and ETH rewards from the stability pool
+        require(msg.sender == DAO, "Only the DAO can execute this function, not you dummy...");
 
-        POOL.transferFrom(DAO, address(this), (POOL.balanceOf(DAO)*percentage/100));
-        POOL.withdraw(POOL.balanceOf(address(this)));
-
-
+    //  Step 1: Withdraw LUSD and LQTY rewards from the stability pool
+        POOL.withdraw((POOL.balanceOf(address(this))*percentage/100));
 
     //  Step 2: Swap all LUSD for DAI
-
         LUSD3CRV.exchange_underlying(0, 1, LUSD.balanceOf(address(this)), (LUSD.balanceOf(address(this))*(Slippage/1000)));
 
     //  Step 3: Wrap DAI into cDAI and pay back the loan on rari.capital.
-
         DAI.approve(address(cDAI), DAI.balanceOf(address(this)));
         cDAI.mint(DAI.balanceOf(address(this)));
         cDAI.approve(address(fcDAI), cDAI.balanceOf(address(this)));
 
-        if(cDAI.balanceOf(address(this)) <= fcDAI.borrowBalanceCurrent(address(this))){
+        // Step 3.5: If the percentage is 100%, pay off the loan using treasury reserves, if it isn't than just pay off what it can.
+
+        if(percentage == 100){
+
+            cDAI.transferFrom(DAO, address(this), (fcDAI.borrowBalanceCurrent(address(this))-cDAI.balanceOf(address(this))));
+            fcDAI.repayBorrow(fcDAI.borrowBalanceCurrent(address(this)));
+        }
+        
+        else{
 
             fcDAI.repayBorrow(cDAI.balanceOf(address(this)));
         }
 
-        else{
+    // Step 4: Withdraw enough FEI to keep the LTV at the target amount and return it to the DAO treasury.
 
-            fcDAI.repayBorrow(fcDAI.borrowBalanceCurrent(address(this)));
-        }
+        // im going to have to use some complex math equation to calculate this.. one sec
+
+        fcFEI.redeemUnderlying();
 
 
-    // Step 4: Withdraw a safe amount of FEI (or all if percentage is 100%) and return it to its owner.
 
     }
     
+    function EditLTV(uint TargetLTV) public {
+
+        require(msg.sender == DAO, "Only the DAO can execute this function, not you dummy...");
+        LTV = TargetLTV;
+    }
+
+    function EditSlippage(uint TargetSlippage) public {
+
+        require(msg.sender == DAO, "Only the DAO can execute this function, not you dummy...");
+        Slippage = TargetSlippage;
+    }
+
 
 // Internal and External Functions this contract uses:
 // (msg.sender SHOULD NOT be used/assumed in any of these functions.)
