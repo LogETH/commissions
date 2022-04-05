@@ -26,18 +26,26 @@ contract PrintMoney {
         DAO = 0xd51dbA7a94e1adEa403553A8235C302cEbF41a3c;
         Slippage = 995; //Translates to 0.5% slippage for swapping DAI to LUSD and vise versa.
         LTV = 80; //Translates to 80% target LTV for the cDAI loan.
+
+        //Of course I probably don't have to tell you this, but please don't preset the LTV >99% since that would break everything lol
+        //(Don't even think about it... i'm watching you.)
     }
 
-//                                        //
-//// Variables that this contract uses: ////
-//                                        //
+
+
+//////////////////////////                                                          /////////////////////////
+/////////////////////////                                                          //////////////////////////
+////////////////////////            Variables that this contract has:             ///////////////////////////
+///////////////////////                                                          ////////////////////////////
+//////////////////////                                                          /////////////////////////////
+
+
 
     // ERC20 tokens
 
     ERC20 DAI  = ERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     ERC20 FEI  = ERC20(0x956F47F50A910163D8BF957Cf5846D573E7f87CA);
     ERC20 LUSD = ERC20(0x5f98805A4E8be255a32880FDeC7F6728C6568bA0);
-    ERC20 USDT = ERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7);
     ERC20 LQTY = ERC20(0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D);
 
     // cERC20 and fcERC20 tokens
@@ -58,35 +66,41 @@ contract PrintMoney {
     uint public Slippage;
     uint public LTV;
 
-//                                                //
-//// Visible Functions that this contract uses: ////
-//                                                //
+
+
+
+//////////////////////////                                                              /////////////////////////
+/////////////////////////                                                              //////////////////////////
+////////////////////////             Visible functions this contract has:             ///////////////////////////
+///////////////////////                                                              ////////////////////////////
+//////////////////////                                                              /////////////////////////////
+
+
 
     function deposit(uint amount) public {
 
         require(msg.sender == DAO, "Only the DAO can execute this function, not you dummy...");
 
-    //  Step 1: Deposit FEI into rari.capital.
+        //  Step 1: Deposit FEI into rari.capital.
         FEI.transferFrom(msg.sender, address(this), amount);
         FEI.approve(address(fcFEI), amount);
         fcFEI.mint(amount);
 
-    //  Step 2: Borrow cDAI at the target LTV and unwrap it.
-
+        //  Step 2: Borrow cDAI at the target LTV and unwrap it.
         fcDAI.borrow(CalcDepositLTV());
         cDAI.redeem(cDAI.balanceOf(address(this)));
 
-    //  Step 3: Swap DAI to LUSD on Curve.fi
+        //  Step 3: Swap DAI to LUSD on Curve.fi
         LUSD3CRV.exchange_underlying(1, 0, DAI.balanceOf(address(this)), (DAI.balanceOf(address(this))*(Slippage/1000)));
 
-    //  Step 4: Deposit all LUSD held by this address into the LUSD stability pool
+        //  Step 4: Deposit all LUSD held by this address into the LUSD stability pool
         POOL.deposit(LUSD.balanceOf(address(this)));
     }
 
-        // Sweep any excess ETH from this address to the DAO address, anyone can call it
-        // I know the compilier flags this as yellow but thats fine
+    // Sweep any excess ETH from this address to the DAO address, anyone can call it
+    // I know the compilier flags this as yellow but thats fine
 
-        // Remember, if its yellow, keep it mellow, if its red, bash your head.
+    // Remember, if its yellow, keep it mellow, if its red, bash your head.
 
     function Sweep() public payable {
 
@@ -94,7 +108,7 @@ contract PrintMoney {
         require(sent, "Failed to send Ether");
     }
 
-        // Anyone can call claimRewards to transfer any LQTY rewards to the DAO
+    // Anyone can call claimRewards to transfer any LQTY rewards to the DAO
 
     function claimRewards() public {
 
@@ -106,46 +120,36 @@ contract PrintMoney {
 
         require(msg.sender == DAO, "Only the DAO can execute this function, not you dummy...");
 
-    //  Step 1: Withdraw LUSD and LQTY rewards from the stability pool
+        //  Step 1: Withdraw LUSD and LQTY rewards from the stability pool
         POOL.withdraw((POOL.balanceOf(address(this))*percentage/100));
 
-    //  Step 2: Swap all LUSD for DAI
+        //  Step 2: Swap all LUSD for DAI
         LUSD3CRV.exchange_underlying(0, 1, LUSD.balanceOf(address(this)), (LUSD.balanceOf(address(this))*(Slippage/1000)));
 
-    //  Step 3: Wrap DAI into cDAI and pay back the loan on rari.capital.
+        //  Step 3: Wrap DAI into cDAI and pay back the loan on rari.capital.
         DAI.approve(address(cDAI), DAI.balanceOf(address(this)));
         cDAI.mint(DAI.balanceOf(address(this)));
         cDAI.approve(address(fcDAI), cDAI.balanceOf(address(this)));
 
         // Step 3.5: If the percentage is 100%, pay off the loan using treasury reserves, if it isn't than just pay off what it can.
-
         if(percentage == 100){
-
             cDAI.transferFrom(DAO, address(this), (fcDAI.borrowBalanceCurrent(address(this))-cDAI.balanceOf(address(this))));
             fcDAI.repayBorrow(fcDAI.borrowBalanceCurrent(address(this)));
         }
-        
-        else{
+        else{fcDAI.repayBorrow(cDAI.balanceOf(address(this)));}
 
-            fcDAI.repayBorrow(cDAI.balanceOf(address(this)));
-        }
-
-    // Step 4: Withdraw enough FEI to keep the LTV at the target amount and return it to the DAO treasury.
-
-        // im going to have to use some complex math equation to calculate this.. one sec
-        // quick mahs.
-
+        // Step 4: Withdraw enough FEI to keep the LTV at the target amount and return FEI and earned LQTY to the DAO treasury.
         if(percentage == 100){
-
             fcFEI.redeem(fcFEI.balanceOf(address(this)));
             FEI.transfer(DAO, FEI.balanceOf(address(this)));
         }
 
         else {
-
             fcFEI.redeem(CalcWithdrawLTV());
             FEI.transfer(DAO, FEI.balanceOf(address(this)));
         }
+
+        LQTY.transfer(DAO, LQTY.balanceOf(address(this)));
     }
     
     function EditLTV(uint TargetLTV) public {
@@ -163,16 +167,23 @@ contract PrintMoney {
     }
 
 
-// Internal and External Functions this contract uses:
+//////////////////////////                                                              /////////////////////////
+/////////////////////////                                                              //////////////////////////
+////////////////////////      Internal and external functions this contract has:      ///////////////////////////
+///////////////////////                                                              ////////////////////////////
+//////////////////////                                                              /////////////////////////////
+
+
+
 // (msg.sender SHOULD NOT be used/assumed in any of these functions.)
 
     // Big math function (this took a while to figure out)
-    // This function calculates how much cDAI to borrow to peg the LTV at the set amount
+    // This function calculates how much cDAI to borrow or FEI to withdraw to peg the LTV at the set amount
     //
     // FULL = Maximum Borrow Balance
     // LTV = Target LTV
     // CurrentLTV = The current LTV ratio
-    // x = How much we have to raise the LTV to reach the target amount.
+    // x = How much we have to raise or lower the LTV to reach the target amount.
     // If its impossible to reach the LTV with the contract's current funds, the function reverts.
 
     function CalcDepositLTV() internal returns(uint){
@@ -221,7 +232,12 @@ contract PrintMoney {
 
 }
 
-//// Contracts that this contract uses, contractception!
+//////////////////////////                                                              /////////////////////////
+/////////////////////////                                                              //////////////////////////
+////////////////////////      Contracts that this contract uses, contractception!     ///////////////////////////
+///////////////////////                                                              ////////////////////////////
+//////////////////////                                                              /////////////////////////////
+
 
 interface Rari{
 
@@ -270,29 +286,10 @@ interface StbPool {
 
     // IBAMM Interface https://github.com/fei-protocol/fei-protocol-core/blob/develop/contracts/pcv/liquity/IBAMM.sol
 
-    function fetchPrice() external view returns (uint256);
-
-    /// @notice returns amount of ETH received for an LUSD swap
-    function getSwapEthAmount(uint256 lusdQty) external view returns (uint256 ethAmount, uint256 feeEthAmount);
-
-    /// @notice Liquity Stability Pool Address
     function balanceOf(address account) external view returns (uint256);
-    function totalSupply() external view returns (uint256);
-
-    /// @notice Reward token
-    function bonus() external view returns (address);
-
-    // Mutative Functions
-
-    /// @notice deposit LUSD for shares in BAMM
     function deposit(uint256 lusdAmount) external;
-
-    /// @notice withdraw shares  in BAMM for LUSD + ETH
     function withdraw(uint256 numShares) external;
-
     function transfer(address to, uint256 amount) external;
     function transferFrom(address from, address to, uint256 amount) external;
 
 }
-
-// Stability Pool Interface Ref: https://github.com/fei-protocol/fei-protocol-core/blob/develop/contracts/pcv/liquity/IStabilityPool.sol
