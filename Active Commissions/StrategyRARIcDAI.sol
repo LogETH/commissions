@@ -55,8 +55,12 @@ contract Strategy is BaseStrategy {
     }
 
     function adjustPosition(uint256 _debtOutstanding) internal override {
-        // TODO: Do something to invest excess `want` tokens (from the Vault) into your positions
-        // NOTE: Try to adjust positions so that `_debtOutstanding` can be freed up on *next* harvest (not immediately)
+
+        DAI.transferFrom(vault, address(this), _debtOutstanding);
+        cDAI.mint(DAI.balanceOf(address(this)));
+        fcDAI.mint(cDAI.balanceOf(address(this)));
+
+        debtOutstanding += _debtOutstanding;
     }
 
     function liquidatePosition(uint256 _amountNeeded)
@@ -78,7 +82,8 @@ contract Strategy is BaseStrategy {
     }
 
     function liquidateAllPositions() internal override returns (uint256) {
-        // TODO: Liquidate all positions and return the amount freed.
+        fcDAI.redeem(fcDAI.balanceOf(address(this)));
+        cDAI.redeem(cDAI.balanceOf(address(this)));
         return want.balanceOf(address(this));
     }
 
@@ -87,6 +92,8 @@ contract Strategy is BaseStrategy {
     function prepareMigration(address _newStrategy) internal override {
         // TODO: Transfer any non-`want` tokens to the new strategy
         // NOTE: `migrate` will automatically forward all `want` in this strategy to the new one
+
+        fcDAI.transfer(_newStrategy, fcDAI.balanceOf(address(this)));
     }
 
     // Override this to add all tokens/tokenized positions this contract manages
@@ -107,7 +114,7 @@ contract Strategy is BaseStrategy {
         address[] memory protected = new address[](2);
 
         protected[0] = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643;
-        protected[1] = 0x0000000000000000000000000000000000000000;
+        protected[1] = 0x0000000000000000000000000000000000000000; // Replace with the actual fcDAI address please.
         
         return protected;
     }
