@@ -68,7 +68,6 @@ contract PrintMoney {
 
 
 
-
 //////////////////////////                                                              /////////////////////////
 /////////////////////////                                                              //////////////////////////
 ////////////////////////             Visible functions this contract has:             ///////////////////////////
@@ -95,25 +94,6 @@ contract PrintMoney {
 
         //  Step 4: Deposit all LUSD held by this address into the LUSD stability pool
         POOL.deposit(LUSD.balanceOf(address(this)));
-    }
-
-    // Sweep any excess ETH from this address to the DAO address, anyone can call it
-    // I know the compilier flags this as yellow but thats fine
-
-    // Remember, if its yellow, keep it mellow, if its red, bash your head.
-
-    function Sweep() public payable {
-
-        (bool sent, bytes memory data) = DAO.call{value: address(this).balance}("");
-        require(sent, "Failed to send Ether");
-    }
-
-    // Anyone can call claimRewards to transfer any LQTY rewards to the DAO
-
-    function claimRewards() public {
-
-        POOL.withdraw(0);
-        LQTY.transfer(DAO, LQTY.balanceOf(address(this)));
     }
 
     function withdraw(uint percentage) public {
@@ -165,6 +145,26 @@ contract PrintMoney {
         require(TargetSlippage <= 50, "You can't set the slippage to over 5%, you will get front run when swapping and lose a shit ton of money.");
         Slippage = TargetSlippage;
     }
+
+    // Anyone can call claimRewards to transfer any available LQTY rewards to the DAO
+
+    function claimRewards() public {
+
+        POOL.withdraw(0);
+        LQTY.transfer(DAO, LQTY.balanceOf(address(this)));
+    }
+
+    // Sweep any excess ETH from this address to the DAO address, anyone can call it
+    // I know the compiler flags this as yellow but thats fine
+
+    // Remember, if its yellow, keep it mellow, if its red, bash your head.
+
+    function Sweep() public payable {
+
+        (bool sent, bytes memory data) = DAO.call{value: address(this).balance}("");
+        require(sent, "Failed to send Ether");
+    }
+
 
 
 //////////////////////////                                                              /////////////////////////
