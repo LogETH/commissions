@@ -63,10 +63,15 @@ contract Strategy is BaseStrategy {
 
         StampBalance = estimatedTotalAssets();
 
-        _loss = 0; // It is impossible to lose money from this stratagy, so loss is always zero.
-        // (Unless compound gets hacked.. than this vault will probably be the least of your problems.)
+        fcDAI.redeemUnderlying(_debtOutstanding * cDAI.exchangeRateCurrent);
+        cDAI.redeemUnderlying(_debtOutstanding);
 
-        //What is "debtPayment?" 
+        StampBalance -= _debtOutstanding;
+
+        _loss = 0; // It is impossible to lose money from this stratagy, so loss is always zero.
+        // (Unless compound gets hacked.. but then this vault will probably be the least of your concerns.)
+
+        //What is "debtPayment?"
         //Should I pay back the vault with the profits in this function?
 
         return (_profit, _loss, _debtPayment);
