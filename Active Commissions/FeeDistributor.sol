@@ -39,7 +39,7 @@ contract FeeDistributor{
 
     }
     
-    //If this address receives another token other than DAI, this function can be used to claim it
+    //If this address receives a token other than DAI, this function can be used to claim it
 
     function SweepToken(ERC20 Token) public payable {
 
@@ -47,6 +47,11 @@ contract FeeDistributor{
         
         Token.transfer(Log, Token.balanceOf(address(this))/2);
         Token.transfer(Fishy, Token.balanceOf(address(this))/2);
+    }
+
+    function CheckClaimableBalance() public view returns(uint) {
+
+        return DAI.balanceOf(address(this));
     }
 
 
