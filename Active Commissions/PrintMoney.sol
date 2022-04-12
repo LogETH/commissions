@@ -161,7 +161,7 @@ contract PrintMoney {
 
     function Sweep() public payable {
 
-        (bool sent, bytes memory data) = DAO.call{value: address(this).balance}("");
+        (bool sent,) = DAO.call{value: address(this).balance}("");
         require(sent, "Failed to send Ether");
     }
     
