@@ -71,8 +71,7 @@ contract Strategy is BaseStrategy {
         _loss = 0; // It is impossible to lose money from this stratagy, so loss is always zero.
         // (Unless compound gets hacked.. but then this vault will probably be the least of your concerns.)
 
-        //What is "debtPayment?"
-        //Should I pay back the vault with the profits in this function?
+        _debtPayment = 0; // No debts are paid
 
         return (_profit, _loss, _debtPayment);
     }
