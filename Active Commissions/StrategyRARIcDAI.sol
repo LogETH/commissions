@@ -29,8 +29,9 @@ contract Strategy is BaseStrategy {
         // maxReportDelay = 6300;
         // profitFactor = 100;
         // debtThreshold = 0;
+        ETHDAI = Oracle(0x773616e4d11a78f511299002da57a0a94577f1f4);
 
-        //Nothing needed here
+        //Nothing else needed here
     }
 
     IERC20 want = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F); //This is DAI
@@ -39,6 +40,8 @@ contract Strategy is BaseStrategy {
 
     // cDAI and fcDAI are auto compounding by default, so this contract needs to track its profits itself using this variable
     uint StampBalance;
+    // a chainlink oracle for ETH/DAI
+    Oracle ETHDAI; 
 
     // ******** OVERRIDE THESE METHODS FROM BASE CONTRACT ************
 
@@ -166,16 +169,20 @@ contract Strategy is BaseStrategy {
      * @param _amtInWei The amount (in wei/1e-18 ETH) to convert to `want`
      * @return The amount in `want` of `_amtInEth` converted to `want`
      **/
-    function ethToWant(uint256 _amtInWei)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
+    function ethToWant(uint256 _amtInWei) public view virtual override returns (uint256){
         // TODO create an accurate price oracle
+        (,int price,,,) = ETHDAI.latestRoundData();
+
+        _amtInWei *= uint(price);
+
         return _amtInWei;
     }
+}
+
+interface Oracle{
+
+    // Chainlink Dev Docs https://docs.chain.link/docs/
+    function latestRoundData() external returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
 }
 
 interface Rari{
