@@ -50,6 +50,7 @@ contract NFTRegisterRewardDistribution{
     uint public TotalRewardsClaimed;
     uint Nonce;
     address admin;
+    mapping(address => bool) perm;
 
 //// Functions that allow the admin to edit the Token, NFT, and emmission rate.
 
@@ -70,10 +71,11 @@ contract NFTRegisterRewardDistribution{
 
 //// Editing the emission rate claims everyone's rewards.
 
-    function EditEmission(uint RewardsPerBlockPerNFT) public {
+    function EditEmission(uint TokensPerNFT, uint HowManyBlocks) public {
 
         require(msg.sender == admin, "You aren't the admin so you can't press this button");
-        RewardFactor = RewardsPerBlockPerNFT;
+
+        RewardFactor = CalculateEmission(TokensPerNFT, HowManyBlocks, NOKO.decimals());
 
         ForceClaim();
     }
@@ -94,14 +96,14 @@ contract NFTRegisterRewardDistribution{
 
     function forceClaim() public {
 
-        require(msg.sender == admin, "You aren't the admin so you can't press this button");
+        require(msg.sender == admin || perm[msg.sender] == true, "You aren't the admin so you can't press this button");
 
         ForceClaim();
     }
 
 //// This button claims your rewards, that's it.
 
-    function Claim() public{
+    function Claim() public {
 
         uint Unclaimed = CalculateRewards(msg.sender, this.CalculateTime(msg.sender));
 
@@ -130,6 +132,14 @@ contract NFTRegisterRewardDistribution{
 
         user[Nonce] = msg.sender;
         Nonce += 1;
+    }
+
+//// Assign perms lets you give an external address permission to call admin only functions like forceClaim()
+
+    function AssignPermission(address Who, bool TrueOrFalse) public {
+        
+        require(msg.sender == admin, "You aren't the admin so you can't press this button");
+        perm[Who] = TrueOrFalse;
     }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -175,6 +185,13 @@ contract NFTRegisterRewardDistribution{
             ClaimOnBehalf(user[UserNonce]);
             UserNonce += 1;
         }
+    }
+
+    function CalculateEmission(uint TokensPerBlockPerNFT, uint HowManyBlocks, uint decimals) public pure returns(uint) {
+
+        uint Value = TokensPerBlockPerNFT * (10**decimals);
+        TokensPerBlockPerNFT = Value/HowManyBlocks;
+        return TokensPerBlockPerNFT;
     }
 
 ///////////////////////////////////////////////////////////
@@ -224,4 +241,5 @@ interface ERC20{
     function transferFrom(address, address, uint256) external;
     function transfer(address, uint256) external;
     function balanceOf(address) external view returns(uint);
+    function decimals() external view returns (uint8);
 }
