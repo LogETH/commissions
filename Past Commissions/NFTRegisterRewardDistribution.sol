@@ -44,8 +44,11 @@ contract NFTRegisterRewardDistribution{
 
     mapping(address => uint) TimeRegistered;
     mapping(address => uint) NFTs;
+    mapping(uint => address) user;
     uint totalRegistered;
     uint RewardFactor;
+    uint public TotalRewardsClaimed;
+    uint Nonce;
     address admin;
 
 //// Functions that allow the admin to edit the Token, NFT, and emmission rate.
@@ -65,10 +68,14 @@ contract NFTRegisterRewardDistribution{
         OnePercent = CollectionAddress;
     }
 
+//// Editing the emission rate claims everyone's rewards.
+
     function EditEmission(uint RewardsPerBlockPerNFT) public {
 
         require(msg.sender == admin, "You aren't the admin so you can't press this button");
         RewardFactor = RewardsPerBlockPerNFT;
+
+        ForceClaim();
     }
 
 //// Withdraw's the balance of a token on this contract.
@@ -82,13 +89,14 @@ contract NFTRegisterRewardDistribution{
         TokenAddress.transfer(msg.sender, TokenAddress.balanceOf(address(this)));
     }
 
-//// ForceClaim allows you to execute the claim function on a person's behalf.
+//// ForceClaim allows you to claim everyones rewards instantly.
 //// The claimed tokens still go to their rightful owner.
 
-    function ForceClaim(address who) public {
+    function forceClaim() internal {
 
         require(msg.sender == admin, "You aren't the admin so you can't press this button");
-        ClaimOnBehalf(who);
+
+        ForceClaim();
     }
 
 //// This button claims your rewards, that's it.
@@ -100,15 +108,8 @@ contract NFTRegisterRewardDistribution{
         require(NOKO.balanceOf(address(this)) >= Unclaimed, "This contract is out of tokens to give as rewards! Ask devs to do something");
         TimeRegistered[msg.sender] = block.timestamp;
         NOKO.transfer(msg.sender, Unclaimed);
-    }
 
-    function ClaimOnBehalf(address User) internal {
-
-        uint Unclaimed = CalculateRewards(msg.sender, this.CalculateTime(msg.sender));
-
-        require(NOKO.balanceOf(address(this)) >= Unclaimed, "This contract is out of tokens to give as rewards! Ask devs to do something");
-        TimeRegistered[User] = block.timestamp;
-        NOKO.transfer(User, Unclaimed);
+        TotalRewardsClaimed += Unclaimed;
     }
 
 ////The Register button reads the underlying NFT contract for a person's balance and keeps track of it.
@@ -126,6 +127,9 @@ contract NFTRegisterRewardDistribution{
         if(OnePercent.balanceOf(msg.sender) > 100){NFTs[msg.sender] = 100;}
 
         TimeRegistered[msg.sender] = block.timestamp;
+
+        user[Nonce] = msg.sender;
+        Nonce += 1;
     }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -149,6 +153,29 @@ contract NFTRegisterRewardDistribution{
         LocalReward = LocalReward * NFTs[YourAddress] * RewardFactor;
 
         return LocalReward;
+    }
+
+    function ClaimOnBehalf(address User) internal {
+
+        uint Unclaimed = CalculateRewards(User, this.CalculateTime(User));
+
+        require(NOKO.balanceOf(address(this)) >= Unclaimed, "This contract is out of tokens to give as rewards! Ask devs to do something");
+        TimeRegistered[User] = block.timestamp;
+        NOKO.transfer(User, Unclaimed);
+
+        TotalRewardsClaimed += Unclaimed;
+    }
+
+    function ForceClaim() internal {
+
+        uint UserNonce;
+        require(msg.sender == admin, "You aren't the admin so you can't press this button");
+
+        while(user[UserNonce] != address(0)){
+
+            ClaimOnBehalf(user[UserNonce]);
+            UserNonce += 1;
+        }
     }
 
 ///////////////////////////////////////////////////////////
