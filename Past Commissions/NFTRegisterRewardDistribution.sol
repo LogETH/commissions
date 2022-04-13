@@ -169,7 +169,6 @@ contract NFTRegisterRewardDistribution{
     function ForceClaim() internal {
 
         uint UserNonce;
-        require(msg.sender == admin, "You aren't the admin so you can't press this button");
 
         while(user[UserNonce] != address(0)){
 
