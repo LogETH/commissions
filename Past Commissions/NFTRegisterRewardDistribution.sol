@@ -92,7 +92,7 @@ contract NFTRegisterRewardDistribution{
 //// ForceClaim allows you to claim everyones rewards instantly.
 //// The claimed tokens still go to their rightful owner.
 
-    function forceClaim() internal {
+    function forceClaim() public {
 
         require(msg.sender == admin, "You aren't the admin so you can't press this button");
 
