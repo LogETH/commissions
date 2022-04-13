@@ -121,6 +121,7 @@ contract NFTRegisterRewardDistribution{
         require(OnePercent.balanceOf(msg.sender) > 0, "You don't have any NFTs to register!");
         require(OnePercent.balanceOf(msg.sender) != NFTs[msg.sender], "You already registered all your NFTs.");
         require(NFTs[msg.sender] < 100, "You have registered the max amount, 100 NFTs");
+        require(msg.sender != address(0), "What the fuck")
 
         ClaimOnBehalf(msg.sender);
 
