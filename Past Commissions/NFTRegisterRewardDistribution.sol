@@ -12,20 +12,18 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
-//// What is this contract? 
+contract NFTRegisterRewardDistribution{
 
 //// This contract simply distributes an ERC20 token among NFT owners.
+
 //// Users register their NFT by using register() to receive rewards.
 //// In order for this contract to function properly, transfer(), transferfrom(), safetransfer(), and safetransferfrom() MUST BE DISABLED on the main NFT contract.
 
 //// Commissioned by spagetti#7777 on 3/17/2022
 
-contract NFTRegisterRewardDistribution{
+    // now to the code:
 
-//// The constructor will execute when the contract is deployed, replace the address(0) with the token and NFT.
-//// You can change the token and the NFT later using EditNFT() and EditToken()
-
-//// The person who deploys the contract is the admin. The admin is hardcoded into the contract, it cannot be changed.
+    // Settings that you can change before deploying
 
     constructor(){
 
@@ -34,26 +32,41 @@ contract NFTRegisterRewardDistribution{
         admin = msg.sender;
     }
 
-//// The Contracts this contract uses goes here, OnePercent and NOKO token
+
+//////////////////////////                                                          /////////////////////////
+/////////////////////////                                                          //////////////////////////
+////////////////////////            Variables that this contract has:             ///////////////////////////
+///////////////////////                                                          ////////////////////////////
+//////////////////////                                                          /////////////////////////////
+
+
+//// The NFT and the ERC20 Token:
 
     NFT OnePercent;
     ERC20 NOKO;
 
-//// Variables that this contract uses, the first one counts time, the second one keeps track of how many NFTs are registered to your address.
-//// The third one keeps track of how many NFTs are registered in total.
+//// All the Variables that this contract uses
 
     mapping(address => uint) TimeRegistered;
     mapping(address => uint) NFTs;
-    mapping(uint => address) user;
-    uint totalRegistered;
-    uint RewardFactor;
-    uint public TotalRewardsClaimed;
-    uint Nonce;
-    address admin;
-    mapping(address => bool) perm;
     mapping(address => uint) PendingReward;
+    mapping(uint => address) user;
+    mapping(address => bool) perm;
+    address admin;
+    uint public TotalRewardsClaimed;
+    uint public totalRegistered;
+    uint RewardFactor;
+    uint Nonce;
+    
 
-//// Functions that allow the admin to edit the Token, NFT, and emmission rate.
+//////////////////////////                                                              /////////////////////////
+/////////////////////////                                                              //////////////////////////
+////////////////////////             Visible functions this contract has:             ///////////////////////////
+///////////////////////                                                              ////////////////////////////
+//////////////////////                                                              /////////////////////////////
+
+
+    // Functions that let the Admin of this contract change settings.
 
     function EditToken(ERC20 Token) public {
 
@@ -62,15 +75,6 @@ contract NFTRegisterRewardDistribution{
         require(Token.balanceOf(address(this)) > 0, "This contract's balance of the token you requested is zero! Add some tokens as rewards before switching the token.");
         NOKO = Token;
     }
-
-    function EditNFT(NFT CollectionAddress) public {
-
-        require(msg.sender == admin, "You aren't the admin so you can't press this button");
-        require(isContract(address(CollectionAddress)) == true, "The address you put in is not a contract.");
-        OnePercent = CollectionAddress;
-    }
-
-//// Editing the emission rate claims everyone's rewards.
 
     function EditEmission(uint TokensPerNFT, uint HowManyBlocks) public {
 
@@ -81,19 +85,16 @@ contract NFTRegisterRewardDistribution{
         SaveRewards();
     }
 
-//// Withdraw's the balance of a token on this contract.
-//// Only usable if that current token is not being used as rewards.
-
-    function ReplaceToken(ERC20 TokenAddress) public {
+    function SweepToken(ERC20 TokenAddress) public {
 
         require(msg.sender == admin, "You aren't the admin so you can't press this button");
         require(isContract(address(TokenAddress)) == true, "The address you put in is not a contract.");
-        require(TokenAddress != NOKO, "This token is currently being used as rewards! You cannot withdraw it while its being used!");
+        require(TokenAddress != NOKO, "This token is currently being used as rewards! You cannot sweep it while its being used!");
         TokenAddress.transfer(msg.sender, TokenAddress.balanceOf(address(this)));
     }
 
-//// ForceClaim allows you to claim everyones rewards instantly.
-//// The claimed tokens still go to their rightful owner.
+    // ForceClaim allows you to claim everyones rewards instantly.
+    // The claimed tokens still go to their rightful owner.
 
     function forceClaim() public {
 
@@ -102,11 +103,11 @@ contract NFTRegisterRewardDistribution{
         ForceClaim();
     }
 
-//// This button claims your rewards, that's it.
+    // This button is what a user would use to normally claim rewards to their address.
 
     function Claim() public {
 
-        uint Unclaimed = CalculateRewards(msg.sender, this.CalculateTime(msg.sender)) + PendingReward[msg.sender];
+        uint Unclaimed = CalculateRewards(msg.sender, CalculateTime(msg.sender)) + PendingReward[msg.sender];
 
         require(NOKO.balanceOf(address(this)) >= Unclaimed, "This contract is out of tokens to give as rewards! Ask devs to do something");
         TimeRegistered[msg.sender] = block.timestamp;
@@ -116,7 +117,7 @@ contract NFTRegisterRewardDistribution{
         TotalRewardsClaimed += Unclaimed;
     }
 
-////The Register button reads the underlying NFT contract for a person's balance and keeps track of it.
+    // The Register button reads the underlying NFT contract for a person's balance and keeps track of it.
 
     function Register() public {
 
@@ -137,7 +138,7 @@ contract NFTRegisterRewardDistribution{
         Nonce += 1;
     }
 
-//// Assign perms lets you give an external address permission to call admin only functions like forceClaim()
+    // Assign perms lets you give an external address permission to call admin only functions like forceClaim()
 
     function AssignPermission(address Who, bool TrueOrFalse) public {
         
@@ -145,13 +146,17 @@ contract NFTRegisterRewardDistribution{
         perm[Who] = TrueOrFalse;
     }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// The internal/external functions this contract uses, it compresses big commands into tiny ones so its easier to implement in the actual buttons. ////
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-////msg.sender and tx.origin should NOT be used in any of the below functions.
+//////////////////////////                                                              /////////////////////////
+/////////////////////////                                                              //////////////////////////
+////////////////////////      Internal and external functions this contract has:      ///////////////////////////
+///////////////////////                                                              ////////////////////////////
+//////////////////////                                                              /////////////////////////////
+
+
+    // (msg.sender SHOULD NOT be used/assumed in any of these functions.)
   
-    function CalculateTime(address YourAddress) external view returns (uint256){
+    function CalculateTime(address YourAddress) internal view returns (uint256){
 
         uint Time = block.timestamp - TimeRegistered[YourAddress];
         if(Time == block.timestamp){Time = 0;}
@@ -161,16 +166,12 @@ contract NFTRegisterRewardDistribution{
 
     function CalculateRewards(address YourAddress, uint256 StakeTime) internal view returns (uint256){
 
-        uint LocalReward = StakeTime;
-
-        LocalReward = LocalReward * NFTs[YourAddress] * RewardFactor;
-
-        return LocalReward;
+        return StakeTime * NFTs[YourAddress] * RewardFactor;
     }
 
     function ClaimOnBehalf(address User) internal {
 
-        uint Unclaimed = CalculateRewards(User, this.CalculateTime(User)) + PendingReward[User];
+        uint Unclaimed = CalculateRewards(User, CalculateTime(User)) + PendingReward[User];
 
         require(NOKO.balanceOf(address(this)) >= Unclaimed, "This contract is out of tokens to give as rewards! Ask devs to do something");
         TimeRegistered[User] = block.timestamp;
@@ -182,7 +183,7 @@ contract NFTRegisterRewardDistribution{
 
     function RecordReward(address User) internal {
 
-        uint Unclaimed = CalculateRewards(User, this.CalculateTime(User));
+        uint Unclaimed = CalculateRewards(User, CalculateTime(User));
         PendingReward[User] += Unclaimed;
         TimeRegistered[User] = block.timestamp;
     }
@@ -216,13 +217,13 @@ contract NFTRegisterRewardDistribution{
         return TokensPerBlockPerNFT;
     }
 
-///////////////////////////////////////////////////////////
-//// The internal/external functions used for UI data  ////
-///////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////
+    //// The internal/external functions used for UI data  ////
+    ///////////////////////////////////////////////////////////
 
     function CheckUnclaimedRewards(address YourAddress) external view returns (uint256){
 
-        return (CalculateRewards(YourAddress, this.CalculateTime(YourAddress)));
+        return (CalculateRewards(YourAddress, CalculateTime(YourAddress)) + PendingReward[YourAddress]);
     }
 
     function GetMultiplier(address YourAddress) external view returns (uint){
@@ -251,9 +252,11 @@ contract NFTRegisterRewardDistribution{
 
 }
     
-/////////////////////////////////////////////////////////////////////////////////////////
-//// The functions that this contract calls to the other contracts, contractception! ////
-/////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////                                                              /////////////////////////
+/////////////////////////                                                              //////////////////////////
+////////////////////////      Contracts that this contract uses, contractception!     ///////////////////////////
+///////////////////////                                                              ////////////////////////////
+//////////////////////                                                              /////////////////////////////
 
 interface NFT{
     function transferFrom(address, address, uint256) external;
