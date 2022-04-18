@@ -110,6 +110,7 @@ contract NFTRegisterRewardDistribution{
         uint Unclaimed = CalculateRewards(msg.sender, CalculateTime(msg.sender)) + PendingReward[msg.sender];
 
         require(NOKO.balanceOf(address(this)) >= Unclaimed, "This contract is out of tokens to give as rewards! Ask devs to do something");
+        require(PendingReward[msg.sender] > 0 || Unclaimed > 0, "You have no rewards to collect");
         TimeRegistered[msg.sender] = block.timestamp;
         NOKO.transfer(msg.sender, Unclaimed);
         PendingReward[msg.sender] = 0;
