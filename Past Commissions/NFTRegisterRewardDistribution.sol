@@ -111,6 +111,7 @@ contract NFTRegisterRewardDistribution{
         require(NOKO.balanceOf(address(this)) >= Unclaimed, "This contract is out of tokens to give as rewards! Ask devs to do something");
         TimeRegistered[msg.sender] = block.timestamp;
         NOKO.transfer(msg.sender, Unclaimed);
+        PendingReward[msg.sender] = 0;
 
         TotalRewardsClaimed += Unclaimed;
     }
@@ -174,6 +175,7 @@ contract NFTRegisterRewardDistribution{
         require(NOKO.balanceOf(address(this)) >= Unclaimed, "This contract is out of tokens to give as rewards! Ask devs to do something");
         TimeRegistered[User] = block.timestamp;
         NOKO.transfer(User, Unclaimed);
+        PendingReward[User] = 0;
 
         TotalRewardsClaimed += Unclaimed;
     }
