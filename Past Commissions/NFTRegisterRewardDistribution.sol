@@ -51,6 +51,7 @@ contract NFTRegisterRewardDistribution{
     uint Nonce;
     address admin;
     mapping(address => bool) perm;
+    mapping(address => uint) PendingReward;
 
 //// Functions that allow the admin to edit the Token, NFT, and emmission rate.
 
@@ -77,7 +78,7 @@ contract NFTRegisterRewardDistribution{
 
         RewardFactor = CalculateEmission(TokensPerNFT, HowManyBlocks, NOKO.decimals());
 
-        ForceClaim();
+        SaveRewards();
     }
 
 //// Withdraw's the balance of a token on this contract.
@@ -105,7 +106,7 @@ contract NFTRegisterRewardDistribution{
 
     function Claim() public {
 
-        uint Unclaimed = CalculateRewards(msg.sender, this.CalculateTime(msg.sender));
+        uint Unclaimed = CalculateRewards(User, this.CalculateTime(User)) + PendingReward[User];
 
         require(NOKO.balanceOf(address(this)) >= Unclaimed, "This contract is out of tokens to give as rewards! Ask devs to do something");
         TimeRegistered[msg.sender] = block.timestamp;
@@ -121,7 +122,7 @@ contract NFTRegisterRewardDistribution{
         require(OnePercent.balanceOf(msg.sender) > 0, "You don't have any NFTs to register!");
         require(OnePercent.balanceOf(msg.sender) != NFTs[msg.sender], "You already registered all your NFTs.");
         require(NFTs[msg.sender] < 100, "You have registered the max amount, 100 NFTs");
-        require(msg.sender != address(0), "What the fuck")
+        require(msg.sender != address(0), "What the fuck");
 
         ClaimOnBehalf(msg.sender);
 
@@ -168,13 +169,31 @@ contract NFTRegisterRewardDistribution{
 
     function ClaimOnBehalf(address User) internal {
 
-        uint Unclaimed = CalculateRewards(User, this.CalculateTime(User));
+        uint Unclaimed = CalculateRewards(User, this.CalculateTime(User)) + PendingReward[User];
 
         require(NOKO.balanceOf(address(this)) >= Unclaimed, "This contract is out of tokens to give as rewards! Ask devs to do something");
         TimeRegistered[User] = block.timestamp;
         NOKO.transfer(User, Unclaimed);
 
         TotalRewardsClaimed += Unclaimed;
+    }
+
+    function RecordReward(address User) internal {
+
+        uint Unclaimed = CalculateRewards(User, this.CalculateTime(User));
+        PendingReward[User] += Unclaimed;
+        TimeRegistered[User] = block.timestamp;
+    }
+
+    function SaveRewards() internal {
+
+        uint UserNonce;
+
+        while(user[UserNonce] != address(0)){
+
+            RecordReward(user[UserNonce]);
+            UserNonce += 1;
+        }
     }
 
     function ForceClaim() internal {
