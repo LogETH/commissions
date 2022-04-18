@@ -106,7 +106,7 @@ contract NFTRegisterRewardDistribution{
 
     function Claim() public {
 
-        uint Unclaimed = CalculateRewards(User, this.CalculateTime(User)) + PendingReward[User];
+        uint Unclaimed = CalculateRewards(msg.sender, this.CalculateTime(msg.sender)) + PendingReward[msg.sender];
 
         require(NOKO.balanceOf(address(this)) >= Unclaimed, "This contract is out of tokens to give as rewards! Ask devs to do something");
         TimeRegistered[msg.sender] = block.timestamp;
