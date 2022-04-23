@@ -171,9 +171,9 @@ contract Strategy is BaseStrategy {
      **/
     function ethToWant(uint256 _amtInWei) public view virtual override returns (uint256){
         // TODO create an accurate price oracle
-        (,int price,,,) = (ETHDAI.latestRoundData()/10**8);
+        (,int price,,,) = ETHDAI.latestRoundData();
 
-        _amtInWei *= uint(price);
+        _amtInWei *= (uint(price)/10**8);
 
         return _amtInWei;
     }
