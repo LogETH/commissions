@@ -51,34 +51,38 @@ contract FlashClose {
 //////////////////////                                                              /////////////////////////////
 
     // Prices are in FEI.
+    // input the price with 8 decimals
+    // Ex: If TRIBE was 6.79 FEI, you would put in 679000000
+
+    // Slippage has 1 decimal, for 0.5% slippage, input "5".
 
     function unwrap(uint TRIBEprice, uint ETHprice, uint Slippage) public {
 
         require(msg.sender == Fishy, "You're not Fishy");
 
-        TRIBE.approve(address(SWAP), uint(uint)); // Approve the MAX amount possible to swap
+        TRIBE.approve(address(SWAP), uint(uint)); // Approve the MAX amount possible to swap on uniswap
 
-        while(fFEI.borrowBalanceCurrent(address(this)) > 0){
+        while(fFEI.borrowBalanceCurrent(Fishy) > 0){
 
-            //  Step 1: Withdraw TRIBE, sell it for ETH, and pay back the loan.
-            fTRIBE.redeem(CalcWithdrawLTV());
-
+            //  Step 1: Withdraw TRIBE, sell it for FEI, and pay back the loan.
+            fTRIBE.transferFrom(Fishy, address(this), CalcWithdrawLTV(ETHprice));
+            fTRIBE.redeem(CalcWithdrawLTV(ETHprice));
         
             SWAP.swapExactTokensForTokens(TRIBE.balanceOf(address(this)), CalcTRIBEPrice(TRIBEprice, Slippage), 
             address[TRIBE][FEI], uint(uint));
 
-            fFEI.repayBorrow(FEI.balanceOf(address(this)));
+            fFEI.repayBorrowBehalf(Fishy, FEI.balanceOf(address(this)));
         }
 
-        while(fFEI.borrowBalanceCurrent(address(this)) > 0){
+        while(fETH.borrowBalanceCurrent(address(this)) > 0){
 
-        //  Step 1: Withdraw TRIBE, sell it for FEI, and pay back the loan.
-        POOL.withdraw((POOL.balanceOf(address(this))*percentage/100));
+            //  Step 1: Withdraw TRIBE, sell it for FEI, and pay back the loan.
+            fETH.redeem(CalcWithdrawLTV(ETHprice));
 
 
         }
 
-        require(GetCurrentLTV() < 60, "Something went wrong");
+        require(GetCurrentLTV() < 50, "Something went wrong");
     }
 
     function Sweep() public payable {
@@ -108,7 +112,7 @@ contract FlashClose {
 
 // (msg.sender SHOULD NOT be used/assumed in any of these functions.)
 
-    function CalcDepositLTV() internal returns(uint){
+    function CalcBorrowLTV() internal returns(uint){
 
         // Desmos to make sure this equation works: https://www.desmos.com/calculator/auu4uxnmx3
 
@@ -118,29 +122,29 @@ contract FlashClose {
         uint FULL = fcDAI.borrowBalanceCurrent(address(this)) + AvalBorrow;
         uint CurrentLTV = (FULL/fcDAI.borrowBalanceCurrent(address(this)))*100;
 
-        uint x = LTV-CurrentLTV;
-        require(CurrentLTV < LTV, "Your deposit is not enough to peg the LTV at the target %, try depositing a higher amount");
+        uint x = 74-CurrentLTV;
+        require(CurrentLTV < 74, "Your deposit is not enough to peg the LTV at the target %, try depositing a higher amount");
 
         AvalBorrow *= (uint(x)/100);
 
         return AvalBorrow;
     }
 
-    function CalcWithdrawLTV() internal returns(uint){
+    function CalcWithdrawLTV(uint ETHprice) internal returns(uint){
 
         // Desmos to make sure this equation works: https://www.desmos.com/calculator/auu4uxnmx3
         // (Yes its the same thing)
 
         uint AvalBorrow;
-        (,AvalBorrow,) = fETH.getAccountLiquidity(address(this));
+        (,AvalBorrow,) = fFEI.getAccountLiquidity(address(this));
 
-        uint FULL = fETH.borrowBalanceCurrent(address(this)) + AvalBorrow;
+        uint FULL = fFEI.borrowBalanceCurrent(address(this)) + (CalcETHPrice(fETH.borrowBalanceCurrent(address(this))*(fETH.exchangeRateCurrent()/10**18), ETHprice) + AvalBorrow);
         uint CurrentLTV = (FULL/fETH.borrowBalanceCurrent(address(this)))*100;
 
         uint x = 74-CurrentLTV;
         require(CurrentLTV < 74, "Your withdraw is not enough to peg the LTV at the target %, try withdrawing a higher amount or 100%");
 
-        uint AvalWithdraw = fETH.balanceOf(address(this)) * (uint(x)/100);
+        uint AvalWithdraw = fFEI.balanceOf(address(this)) * (uint(x)/100);
 
         return AvalWithdraw;
 
@@ -151,19 +155,23 @@ contract FlashClose {
         // Desmos to make sure this equation works: https://www.desmos.com/calculator/auu4uxnmx3
         // (Yes its the same thing)
 
-        uint AvalBorrow;
-        (,AvalBorrow,) = fETH.getAccountLiquidity(address(this));
+        (,uint AvalBorrow,) = fTRIBE.getAccountLiquidity(address(this));
 
-        uint FULL = fETH.borrowBalanceCurrent(address(this)) + AvalBorrow;
-        uint CurrentLTV = (FULL/fETH.borrowBalanceCurrent(address(this)))*100;
+        uint FULL = fTRIBE.borrowBalanceCurrent(address(this)) + AvalBorrow;
+        uint CurrentLTV = (FULL/fTRIBE.borrowBalanceCurrent(address(this)))*100;
 
         return CurrentLTV;
 
     }
 
-    function CalcTRIBEPrice(TRIBEprice, ETHprice, Slippage) internal returns (uint){
+    function CalcTRIBEPrice(uint TRIBEprice,uint ETHprice, uint Slippage) internal returns (uint){
 
         return (TRIBE.balanceOf(address(this))*TRIBEprice*ETHprice)(Slippage/1000);
+    }
+
+    function CalcETHPrice(uint ETHprice, uint Slippage) internal returns (uint){
+
+        return (TRIBE.balanceOf(address(this))*(TRIBEprice/10^8)*(ETHprice/10**8))(Slippage/1000);
     }
 }
 
@@ -184,6 +192,7 @@ interface Rari{
     function transfer(address, uint256) external;
     function borrow(uint borrowAmount) external returns (uint);
     function repayBorrow(uint repayAmount) external returns (uint);
+    function repayBorrowBehalf(address borrower, uint repayAmount) external returns (uint)
     function exchangeRateCurrent() external returns (uint);
     function balanceOf(address) external view returns(uint);
     function getAccountLiquidity(address account) external returns (uint, uint, uint);
@@ -206,6 +215,14 @@ interface ERC20{
 interface Uniswap {
 
     // 0x7a250d5630b4cf539739df2c5dacb4c659f2488d
+
+    function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] memory path, uint deadline) external view returns (uint256);
+
+}
+
+interface UniswapV3 {
+
+    // 0xE592427A0AEce92De3Edee1F18E0157C05861564
 
     function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] memory path, uint deadline) external view returns (uint256);
     function deposit(uint256 lusdAmount) external;
