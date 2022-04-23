@@ -6,7 +6,7 @@ pragma solidity >=0.7.0 <0.9.0;
 
     // now to the code:
 
-contract PrintMoney {
+contract FlashClose {
 
     // Settings that you can change before deploying
 
@@ -50,60 +50,35 @@ contract PrintMoney {
 ///////////////////////                                                              ////////////////////////////
 //////////////////////                                                              /////////////////////////////
 
+    // Prices are in FEI.
 
     function unwrap(uint TRIBEprice, uint ETHprice, uint Slippage) public {
 
         require(msg.sender == Fishy, "You're not Fishy");
 
-        TRIBE.approve(address(SWAP), uint(uint));
+        TRIBE.approve(address(SWAP), uint(uint)); // Approve the MAX amount possible to swap
 
-        while(fETH.borrowBalanceCurrent(address(this)) > 0){
+        while(fFEI.borrowBalanceCurrent(address(this)) > 0){
 
-        //  Step 1: Withdraw TRIBE, sell it for ETH, and pay back the loan.
-        POOL.withdraw((POOL.balanceOf(address(this))*percentage/100));
+            //  Step 1: Withdraw TRIBE, sell it for ETH, and pay back the loan.
+            fTRIBE.redeem(CalcWithdrawLTV());
 
         
-        SWAP.swapExactTokensForTokens(TRIBE.balanceOf(address(this)));
+            SWAP.swapExactTokensForTokens(TRIBE.balanceOf(address(this)), CalcTRIBEPrice(TRIBEprice, Slippage), 
+            address[TRIBE][FEI], uint(uint));
+
+            fFEI.repayBorrow(FEI.balanceOf(address(this)));
         }
 
         while(fFEI.borrowBalanceCurrent(address(this)) > 0){
 
-        //  Step 1: Withdraw TRIBE, sell it for ETH, and pay back the loan.
+        //  Step 1: Withdraw TRIBE, sell it for FEI, and pay back the loan.
         POOL.withdraw((POOL.balanceOf(address(this))*percentage/100));
 
 
         }
 
-        //  Step 1: Withdraw TRIBE, sell it for ETH, and pay back the loan.
-        POOL.withdraw((POOL.balanceOf(address(this))*percentage/100));
-
-        //  Step 2: Swap all LUSD for DAI
-        LUSD3CRV.exchange_underlying(0, 1, LUSD.balanceOf(address(this)), (LUSD.balanceOf(address(this))*(Slippage/1000)));
-
-        //  Step 3: Wrap DAI into cDAI and pay back the loan on rari.capital.
-        DAI.approve(address(cDAI), DAI.balanceOf(address(this)));
-        cDAI.mint(DAI.balanceOf(address(this)));
-        cDAI.approve(address(fcDAI), cDAI.balanceOf(address(this)));
-
-        // Step 3.5: If the percentage is 100%, pay off the entire loan using treasury reserves, if it isn't than just pay off what it can.
-        if(percentage == 100){
-            cDAI.transferFrom(DAO, address(this), (fcDAI.borrowBalanceCurrent(address(this))-cDAI.balanceOf(address(this))));
-            fcDAI.repayBorrow(fcDAI.borrowBalanceCurrent(address(this)));
-        }
-        else{fcDAI.repayBorrow(cDAI.balanceOf(address(this)));}
-
-        // Step 4: Withdraw enough FEI to keep the LTV at the target amount and return FEI and earned LQTY to the DAO treasury.
-        if(percentage == 100){
-            fcFEI.redeem(fcFEI.balanceOf(address(this)));
-            FEI.transfer(DAO, FEI.balanceOf(address(this)));
-        }
-
-        else {
-            fcFEI.redeem(CalcWithdrawLTV());
-            FEI.transfer(DAO, FEI.balanceOf(address(this)));
-        }
-
-        LQTY.transfer(DAO, LQTY.balanceOf(address(this)));
+        require(GetCurrentLTV() < 60, "Something went wrong");
     }
 
     function Sweep() public payable {
@@ -138,8 +113,7 @@ contract PrintMoney {
         // Desmos to make sure this equation works: https://www.desmos.com/calculator/auu4uxnmx3
 
         uint AvalBorrow;
-        uint a;
-        (a, AvalBorrow, a) = fcDAI.getAccountLiquidity(address(this));
+        (AvalBorrow) = fTRIBE.getAccountLiquidity(address(this));
 
         uint FULL = fcDAI.borrowBalanceCurrent(address(this)) + AvalBorrow;
         uint CurrentLTV = (FULL/fcDAI.borrowBalanceCurrent(address(this)))*100;
@@ -158,19 +132,38 @@ contract PrintMoney {
         // (Yes its the same thing)
 
         uint AvalBorrow;
-        uint a;
-        (a, AvalBorrow, a) = fcDAI.getAccountLiquidity(address(this));
+        (,AvalBorrow,) = fETH.getAccountLiquidity(address(this));
 
-        uint FULL = fcDAI.borrowBalanceCurrent(address(this)) + AvalBorrow;
-        uint CurrentLTV = (FULL/fcDAI.borrowBalanceCurrent(address(this)))*100;
+        uint FULL = fETH.borrowBalanceCurrent(address(this)) + AvalBorrow;
+        uint CurrentLTV = (FULL/fETH.borrowBalanceCurrent(address(this)))*100;
 
-        uint x = LTV-CurrentLTV;
-        require(CurrentLTV < LTV, "Your withdraw is not enough to peg the LTV at the target %, try withdrawing a higher amount or 100%");
+        uint x = 74-CurrentLTV;
+        require(CurrentLTV < 74, "Your withdraw is not enough to peg the LTV at the target %, try withdrawing a higher amount or 100%");
 
-        uint AvalWithdraw = fcFEI.balanceOf(address(this)) * (uint(x)/100);
+        uint AvalWithdraw = fETH.balanceOf(address(this)) * (uint(x)/100);
 
         return AvalWithdraw;
 
+    }
+
+    function GetCurrentLTV() internal returns(uint){
+
+        // Desmos to make sure this equation works: https://www.desmos.com/calculator/auu4uxnmx3
+        // (Yes its the same thing)
+
+        uint AvalBorrow;
+        (,AvalBorrow,) = fETH.getAccountLiquidity(address(this));
+
+        uint FULL = fETH.borrowBalanceCurrent(address(this)) + AvalBorrow;
+        uint CurrentLTV = (FULL/fETH.borrowBalanceCurrent(address(this)))*100;
+
+        return CurrentLTV;
+
+    }
+
+    function CalcTRIBEPrice(TRIBEprice, ETHprice, Slippage) internal returns (uint){
+
+        return (TRIBE.balanceOf(address(this))*TRIBEprice*ETHprice)(Slippage/1000);
     }
 }
 
