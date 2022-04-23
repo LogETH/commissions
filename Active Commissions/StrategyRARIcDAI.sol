@@ -52,7 +52,7 @@ contract Strategy is BaseStrategy {
 
     function estimatedTotalAssets() public view override returns (uint256) {
 
-        return (fcDAI.balanceOf(address(this)) * fcDAI.exchangeRateCurrent() * cDAI.exchangeRateCurrent());
+        return (fcDAI.balanceOf(address(this)) * (fcDAI.exchangeRateCurrent()/10**18) * (cDAI.exchangeRateCurrent()/10**18));
     }
 
     function prepareReturn(uint256 _debtOutstanding) internal override returns(uint256 _profit, uint256 _loss, uint256 _debtPayment){
@@ -90,7 +90,7 @@ contract Strategy is BaseStrategy {
         if(StampBalance == 0){StampBalance = estimatedTotalAssets();}
         else{
 
-            StampBalance += (_debtOutstanding * fcDAI.exchangeRateCurrent() * cDAI.exchangeRateCurrent());
+            StampBalance += (_debtOutstanding * (fcDAI.exchangeRateCurrent()/10**18) * (cDAI.exchangeRateCurrent()/10**18));
         }
     }
 
