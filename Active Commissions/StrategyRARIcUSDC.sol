@@ -174,6 +174,7 @@ contract Strategy is BaseStrategy {
         (,int price,,,) = ETHUSDC.latestRoundData();
 
         _amtInWei *= (uint(price)/10**8);
+        _amtInWei *= 10**-12; // ETH has 18 decimals while USDC has 6, so we need to subtract 12 zeros.
 
         return _amtInWei;
     }
