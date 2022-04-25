@@ -29,30 +29,30 @@ contract Strategy is BaseStrategy {
         // maxReportDelay = 6300;
         // profitFactor = 100;
         // debtThreshold = 0;
-        ETHDAI = Oracle(0x986b5e1e1755e3c2440e960477f25201b0a8bbd4);
+        ETHUSDC = Oracle(0x986b5e1e1755e3c2440e960477f25201b0a8bbd4);
 
         //Nothing else needed here
     }
 
     IERC20 want = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48); //This is USDC
-    Rari fcDAI = Rari(0x0000000000000000000000000000000000000000); // Replace with the actual fcUSDC address please.
-    Comp cDAI = Comp(0x39AA39c021dfbaE8faC545936693aC917d5E7563); // This is cUSDC
+    Rari fcUSDC = Rari(0x0000000000000000000000000000000000000000); // Replace with the actual fcUSDC address please.
+    Comp cUSDC = Comp(0x39AA39c021dfbaE8faC545936693aC917d5E7563); // This is cUSDC
 
-    // cDAI and fcDAI are auto compounding by default, so this contract needs to track its profits itself using this variable
+    // cUSDC and fcUSDC are auto compounding by default, so this contract needs to track its profits itself using this variable
     uint StampBalance;
-    // a chainlink oracle for ETH/DAI
-    Oracle ETHDAI; 
+    // a chainlink oracle for ETH/USDC
+    Oracle ETHUSDC; 
 
     // ******** OVERRIDE THESE METHODS FROM BASE CONTRACT ************
 
     function name() external view override returns (string memory) {
 
-        return "StrategyRARIcDAI";
+        return "StrategyRARIcUSDC";
     }
 
     function estimatedTotalAssets() public view override returns (uint256) {
 
-        return (fcDAI.balanceOf(address(this)) * (fcDAI.exchangeRateCurrent()/10**18) * (cDAI.exchangeRateCurrent()/10**18));
+        return (fcUSDC.balanceOf(address(this)) * (fcUSDC.exchangeRateCurrent()/10**18) * (cUSDC.exchangeRateCurrent()/10**18));
     }
 
     function prepareReturn(uint256 _debtOutstanding) internal override returns(uint256 _profit, uint256 _loss, uint256 _debtPayment){
@@ -61,13 +61,13 @@ contract Strategy is BaseStrategy {
         // NOTE: Should try to free up at least `_debtOutstanding` of underlying position
 
         _profit = estimatedTotalAssets() - StampBalance;
-        fcDAI.redeemUnderlying(_profit * cDAI.exchangeRateCurrent);
-        cDAI.redeemUnderlying(_profit);
+        fcUSDC.redeemUnderlying(_profit * cUSDC.exchangeRateCurrent/(10**18));
+        cUSDC.redeemUnderlying(_profit);
 
         StampBalance = estimatedTotalAssets();
 
-        fcDAI.redeemUnderlying(_debtOutstanding * cDAI.exchangeRateCurrent);
-        cDAI.redeemUnderlying(_debtOutstanding);
+        fcUSDC.redeemUnderlying(_debtOutstanding * (cUSDC.exchangeRateCurrent/10**18));
+        cUSDC.redeemUnderlying(_debtOutstanding);
 
         StampBalance -= _debtOutstanding;
 
@@ -81,16 +81,16 @@ contract Strategy is BaseStrategy {
 
     function adjustPosition(uint256 _debtOutstanding) internal override {
 
-        DAI.transferFrom(vault, address(this), _debtOutstanding);
-        cDAI.mint(DAI.balanceOf(address(this)));
-        fcDAI.mint(cDAI.balanceOf(address(this)));
+        UDSC.transferFrom(vault, address(this), _debtOutstanding);
+        cUSDC.mint(USDC.balanceOf(address(this)));
+        fcUSDC.mint(cUSDC.balanceOf(address(this)));
 
         debtOutstanding += _debtOutstanding;
 
         if(StampBalance == 0){StampBalance = estimatedTotalAssets();}
         else{
 
-            StampBalance += (_debtOutstanding * (fcDAI.exchangeRateCurrent()/10**18) * (cDAI.exchangeRateCurrent()/10**18));
+            StampBalance += (_debtOutstanding * (fcUSDC.exchangeRateCurrent()/10**18) * (cUSDC.exchangeRateCurrent()/10**18));
         }
     }
 
@@ -103,8 +103,8 @@ contract Strategy is BaseStrategy {
         // NOTE: Maintain invariant `want.balanceOf(this) >= _liquidatedAmount`
         // NOTE: Maintain invariant `_liquidatedAmount + _loss <= _amountNeeded`
 
-        fcDAI.redeemUnderlying(_amountNeeded * cDAI.exchangeRateCurrent);
-        cDAI.redeemUnderlying(_amountNeeded);
+        fcUSDC.redeemUnderlying(_amountNeeded * (cUSDC.exchangeRateCurrent/10**18));
+        cUSDC.redeemUnderlying(_amountNeeded);
 
         StampBalance -= _amountNeeded;
 
@@ -118,8 +118,8 @@ contract Strategy is BaseStrategy {
     }
 
     function liquidateAllPositions() internal override returns (uint256) {
-        fcDAI.redeem(fcDAI.balanceOf(address(this)));
-        cDAI.redeem(cDAI.balanceOf(address(this)));
+        fcUSDC.redeem(fcUSDC.balanceOf(address(this)));
+        cUSDC.redeem(cUSDC.balanceOf(address(this)));
         return want.balanceOf(address(this));
     }
 
@@ -129,7 +129,7 @@ contract Strategy is BaseStrategy {
         // TODO: Transfer any non-`want` tokens to the new strategy
         // NOTE: `migrate` will automatically forward all `want` in this strategy to the new one
 
-        fcDAI.transfer(_newStrategy, fcDAI.balanceOf(address(this)));
+        fcUSDC.transfer(_newStrategy, fcUSDC.balanceOf(address(this)));
     }
 
     // Override this to add all tokens/tokenized positions this contract manages
@@ -171,11 +171,9 @@ contract Strategy is BaseStrategy {
      **/
     function ethToWant(uint256 _amtInWei) public view virtual override returns (uint256){
         // TODO create an accurate price oracle
-        (,int price,,,) = ETHDAI.latestRoundData();
+        (,int price,,,) = ETHUSDC.latestRoundData();
 
-        _amtInWei *= (1/(uint(price)/10**8));
-
-        _amtInWei *= 10**-12; // ETH has 18 decimals while USDC has 6, so we need to subtract 12 zeros.
+        _amtInWei *= (uint(price)/10**8);
 
         return _amtInWei;
     }
