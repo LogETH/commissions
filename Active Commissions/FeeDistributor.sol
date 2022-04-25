@@ -6,7 +6,7 @@ contract FeeDistributor{
 
     ERC20 DAI = ERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     address Log = 0x4D9aA2Aac04Ce1Ba557D6008b28210F4187930A2;
-    address Fishy = 0x0000000000000000000000000000000000000000; // Put your address here.
+    address Fishy = 0x72b7448f470D07222Dbf038407cD69CC380683F3;
 
 
     function claim() public{
