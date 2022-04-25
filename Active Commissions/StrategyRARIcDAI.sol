@@ -103,7 +103,7 @@ contract Strategy is BaseStrategy {
         // NOTE: Maintain invariant `want.balanceOf(this) >= _liquidatedAmount`
         // NOTE: Maintain invariant `_liquidatedAmount + _loss <= _amountNeeded`
 
-        fcDAI.redeemUnderlying(_amountNeeded * cDAI.exchangeRateCurrent);
+        fcDAI.redeemUnderlying(_amountNeeded * (cDAI.exchangeRateCurrent/10**18));
         cDAI.redeemUnderlying(_amountNeeded);
 
         StampBalance -= _amountNeeded;
