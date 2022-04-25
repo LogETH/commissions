@@ -13,8 +13,10 @@ contract FeeDistributor{
 
         //Sends half to Log and half to Fishy, callable by anyone.
 
-        DAI.transfer(Log, DAI.balanceOf(address(this))/2);
-        DAI.transfer(Fishy, DAI.balanceOf(address(this))/2);
+        uint half = DAI.balanceOf(address(this))/2;
+
+        DAI.transfer(Log, half);
+        DAI.transfer(Fishy, half);
     }
 
     //Edits the address rewards are sent to, you cannot set it to an empty address or the burn address.
@@ -33,8 +35,10 @@ contract FeeDistributor{
 
     function Sweep() public payable {
 
-        (bool sent,) = Log.call{value: address(this).balance/2}("");
-        (bool sent2,) = Fishy.call{value: address(this).balance/2}("");
+        uint half = address(this).balance/2;
+
+        (bool sent,) = Log.call{value: half}("");
+        (bool sent2,) = Fishy.call{value: half}("");
         require(sent && sent2, "Failed to send Ether");
 
     }
@@ -43,10 +47,10 @@ contract FeeDistributor{
 
     function SweepToken(ERC20 Token) public payable {
 
-        require(Token != DAI);
+        uint half = Token.balanceOf(address(this))/2;
         
-        Token.transfer(Log, Token.balanceOf(address(this))/2);
-        Token.transfer(Fishy, Token.balanceOf(address(this))/2);
+        Token.transfer(Log, half);
+        Token.transfer(Fishy, half);
     }
 
     function CheckClaimableBalance() public view returns(uint) {
