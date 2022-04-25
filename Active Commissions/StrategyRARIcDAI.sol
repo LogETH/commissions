@@ -34,6 +34,15 @@ contract Strategy is BaseStrategy {
         //Nothing else needed here
     }
 
+    // LOGIC RULES:
+
+    // Conversions from DAI to cDAI or fcDAI require a decimal update (DAI has 18, cDAI and fcDAI have 8)
+    // Conversions from cDAI to fcDAI do not require a decimal update
+    // msg.sender should not be used anywhere in this contract 
+    // All price oracles return the price conversion from the greater Currency to the lesser Currency in terms of value, 
+        // This means you multiply to go from Big -> Small, and divide to do the reverse.
+    // ETH -> DAI -> cDAI -> fcDAI (Biggest to Smallest)
+
     IERC20 want = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F); //This is DAI
     Rari fcDAI = Rari(0x0000000000000000000000000000000000000000); // Replace with the actual fcDAI address please.
     Comp cDAI = Comp(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643); // This is cDAI
