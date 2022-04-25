@@ -27,7 +27,7 @@ pragma solidity >=0.7.0 <0.9.0;
 
     // now to the code:
 
-contract PrintMoney {
+abstract contract PrintMoney {
 
     // Settings that you can change before deploying
 
@@ -165,7 +165,7 @@ contract PrintMoney {
     }
 
     // Sweep any excess ETH from this address to the DAO address, anyone can call it
-    // I know the compiler flags this as yellow but thats fine
+    // I know the compiler can flag this as yellow but thats fine
 
     // Remember, if its yellow, keep it mellow, if its red, bash your head.
 
