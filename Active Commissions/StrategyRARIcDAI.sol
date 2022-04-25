@@ -61,12 +61,12 @@ contract Strategy is BaseStrategy {
         // NOTE: Should try to free up at least `_debtOutstanding` of underlying position
 
         _profit = estimatedTotalAssets() - StampBalance;
-        fcDAI.redeemUnderlying(_profit * cDAI.exchangeRateCurrent);
+        fcDAI.redeemUnderlying(_profit * cDAI.exchangeRateCurrent(/10**18));
         cDAI.redeemUnderlying(_profit);
 
         StampBalance = estimatedTotalAssets();
 
-        fcDAI.redeemUnderlying(_debtOutstanding * cDAI.exchangeRateCurrent);
+        fcDAI.redeemUnderlying(_debtOutstanding * (cDAI.exchangeRateCurrent/10**18));
         cDAI.redeemUnderlying(_debtOutstanding);
 
         StampBalance -= _debtOutstanding;
