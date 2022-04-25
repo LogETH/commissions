@@ -33,8 +33,8 @@ contract FeeDistributor{
 
     function Sweep() public payable {
 
-        (bool sent, bytes memory data) = Log.call{value: address(this).balance/2}("");
-        (bool sent2, bytes memory data2) = Fishy.call{value: address(this).balance/2}("");
+        (bool sent,) = Log.call{value: address(this).balance/2}("");
+        (bool sent2,) = Fishy.call{value: address(this).balance/2}("");
         require(sent && sent2, "Failed to send Ether");
 
     }
