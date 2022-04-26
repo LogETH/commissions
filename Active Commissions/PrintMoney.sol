@@ -8,6 +8,8 @@
 // You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.
 // This TL;DR is solely an explaination and is not a representation of the license.
 
+// You may not deploy this contract without a signature displaying "[address] has permission to deploy PrintMoney.sol" generated from coinlog.eth
+
 // By deploying this contract, you agree to the license above and the terms and conditions that come with it.
 
 pragma solidity >=0.7.0 <0.9.0;
