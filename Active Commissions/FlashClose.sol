@@ -146,35 +146,13 @@ abstract contract FlashClose {
 
 // (msg.sender SHOULD NOT be used/assumed in any of these functions.)
 
-    function CalcBorrowLTV() internal returns(uint){
-
-        // Desmos to make sure this equation works: https://www.desmos.com/calculator/auu4uxnmx3
-
-        (,uint AvalBorrow,) = cCollat.getAccountLiquidity(address(this));
-
-        uint FULL = cCollat.borrowBalanceCurrent(address(this)) + AvalBorrow;
-        uint CurrentLTV = (FULL/cCollat.borrowBalanceCurrent(address(this)))*100;
-
-        uint x = LTV-CurrentLTV;
-        require(CurrentLTV < LTV, "Your deposit is not enough to peg the LTV at the target %, try depositing a higher amount");
-
-        AvalBorrow *= (uint(x)/100);
-
-        return AvalBorrow;
-    }
-
     function CalcWithdrawLTV() internal returns(uint){
 
         // Desmos to make sure this equation works: https://www.desmos.com/calculator/auu4uxnmx3
         // (Yes its the same thing)
 
-        (,uint AvalBorrow,) = cCollat.getAccountLiquidity(address(this));
-
-        uint FULL = cCollat.borrowBalanceCurrent(address(this)) + AvalBorrow;
-        uint CurrentLTV = (FULL/cCollat.borrowBalanceCurrent(address(this)))*100;
-
-        uint x = LTV-CurrentLTV;
-        require(CurrentLTV < LTV, "Your withdraw is not enough to peg the LTV at the target %, try withdrawing a higher amount or 100%");
+        uint x = LTV-GetCurrentLTV();
+        require(GetCurrentLTV() < LTV, "Your withdraw is not enough to peg the LTV at the target %, try withdrawing a higher amount or 100%");
 
         uint AvalWithdraw = cCollat.balanceOf(address(this)) * (uint(x)/100);
 
@@ -226,11 +204,6 @@ interface Rari{
     function borrowBalanceCurrent(address account) external returns (uint);
 }
 
-interface Curve{
-
-    function exchange_underlying(int128, int128, uint256, uint256) external;
-}
-
 interface ERC20{
 
     function transferFrom(address, address, uint256) external;
@@ -240,8 +213,6 @@ interface ERC20{
 }
 
 interface Uniswap {
-
-    // 0x7a250d5630b4cf539739df2c5dacb4c659f2488d
 
     function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] memory path, uint deadline) external view returns (uint256);
 
