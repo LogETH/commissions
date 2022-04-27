@@ -3,12 +3,12 @@
 // TL;DR: You are free to use this however you want, edit however you want, and integrate however you want
 // I (@LogETH) am not responsible for any damages that may happen from use of this contract.
 
-//  NOTE: THIS DOES NOT WORK YET, DONT USE IT.
-
 pragma solidity >=0.7.0 <0.9.0;
 
 // This contract unwinds any leveraged loan on any COMP based B/L platform like Compound.finance, Tranquil.finance, Market.xyz, and Rari.capital in a single click
 // Works on all chains and all forks of compound. No need for oracles or flash loans. Only a uniswap V2 fork like pancakeswap or whatever you have on your preferred chain.
+
+    // For now, this tool only works with a single collateral and a single borrow token, multi collateral coming soon.
 
     // How to setup and use (Super Easy):
 
@@ -18,12 +18,13 @@ pragma solidity >=0.7.0 <0.9.0;
 //  4) Press unwrap() and you're done!
 
 //  All the error messages I put in should tell you what is wrong if something goes wrong
+//  Yes I know I name my variables stupid things, im based af.
 
     // now to the code:
 
 abstract contract FlashClose {
 
-    // Settings that you change before deploying
+    // Settings that you change before deploying, make sure they are all right!
 
     constructor(){
 
@@ -38,9 +39,14 @@ abstract contract FlashClose {
 
         LTV = 0; // Set this to the MAX LTV minus 1, for example, if the max LTV is 80, set this to 79.
 
-        require(SWAP != address(0), "You need to put the uniswap V2 router address in the constructor settings before you deploy!");
-        require(Borrow != address(0), "You need to put the collateral token address in the constructor settings before you deploy!");
-        require(Collat != address(0), "You need to put the borrowed token address in the constructor settings before you deploy!");
+        require(SWAP != Uniswap(address(0)), "You need to put the uniswap V2 router address in the constructor settings before you deploy!");
+        require(Borrow != ERC20(address(0)), "You need to put the collateral token address in the constructor settings before you deploy!");
+        require(Collat != ERC20(address(0)), "You need to put the borrowed token address in the constructor settings before you deploy!");
+
+        swapper = new address[](2);
+
+        swapper[0] = address(Collat);
+        swapper[1] = address(Borrow);
     }
 
 
@@ -67,6 +73,10 @@ abstract contract FlashClose {
     Uniswap SWAP; // Your preferred Uniswap V2 router.
 
     address you; // This is you 
+    uint LTV; // The target LTV that you set in the beginning
+    uint max = 2**256-1; // The biggest number possible in solidity
+
+    address[] swapper;
 
 
 
@@ -80,32 +90,33 @@ abstract contract FlashClose {
     // input the price with 8 decimals
     // Ex: If TRIBE was 6.79 FEI, you would put in 679000000
 
-    // Slippage has 1 decimal, for 0.5% slippage, input "5".
+    // Slippage has 2 decimals, for 0.5% slippage, input "50".
     // If you don't know what slippage is go look up how to use a dex on google please
 
-    function unwrap(uint TRIBEprice, uint ETHprice, uint Slippage) public {
+    function unwrap(uint CollatPrice, uint Slippage) public {
 
         require(msg.sender == you, "You're not you");
+        require(Slippage < 500, "Yeah, don't set the slippage that high, you will lose money if I allowed you to do this.");
 
-        TRIBE.approve(address(SWAP), uint(uint)); // Approve the MAX amount possible to swap on uniswap
+        Collat.approve(address(SWAP), max); // Approve the MAX amount possible to swap on uniswap
 
         while(cBorrow.borrowBalanceCurrent(you) > 0){
 
-            //  Step 1: Withdraw the token you're lending, sell it for the borrowed token, and pay back your debt.
-            cCollat.transferFrom(you, address(this), CalcWithdrawLTV(ETHprice));
-            cCollat.redeem(CalcWithdrawLTV(ETHprice));
+            //  Step 1: Withdraw the token you're lending.
+            cCollat.transferFrom(you, address(this), CalcWithdrawLTV());
+            cCollat.redeem(CalcWithdrawLTV());
 
             //  Step 2: Swap Collat for Borrow.
-            SWAP.swapExactTokensForTokens(TRIBE.balanceOf(address(this)), CalcCollatPrice(TRIBEprice, Slippage), 
-            address[Collat][Borrow], uint(uint));
+            SWAP.swapExactTokensForTokens(Collat.balanceOf(address(this)), CalcCollatPrice(CollatPrice, Slippage), 
+            swapper, max);
 
-            //  Step 3: Pay back your debt
+            //  Step 3: Pay back your debt.
             cBorrow.repayBorrowBehalf(you, Borrow.balanceOf(address(this)));
 
             //  Step 4: Repeat until your debt is zero.
         }
 
-        require(GetCurrentLTV() < 50, "Something went wrong");
+        require(GetCurrentLTV() == 0, "Something went wrong"); // This probably will never happen but its just here just in case something unexpected happens for your safety.
     }
 
     //  Functions that give you control over this address, sweep sends any gas token held by this contract to you
@@ -113,7 +124,7 @@ abstract contract FlashClose {
 
     function Sweep() public payable {
 
-        (bool sent, bytes memory data) = you.call{value: address(this).balance}("");
+        (bool sent,) = you.call{value: address(this).balance}("");
         require(sent, "Failed to send Ether");
     }
 
@@ -139,35 +150,33 @@ abstract contract FlashClose {
 
         // Desmos to make sure this equation works: https://www.desmos.com/calculator/auu4uxnmx3
 
-        uint AvalBorrow;
-        (AvalBorrow) = fTRIBE.getAccountLiquidity(address(this));
+        (,uint AvalBorrow,) = cCollat.getAccountLiquidity(address(this));
 
-        uint FULL = fcDAI.borrowBalanceCurrent(address(this)) + AvalBorrow;
-        uint CurrentLTV = (FULL/fcDAI.borrowBalanceCurrent(address(this)))*100;
+        uint FULL = cCollat.borrowBalanceCurrent(address(this)) + AvalBorrow;
+        uint CurrentLTV = (FULL/cCollat.borrowBalanceCurrent(address(this)))*100;
 
-        uint x = 74-CurrentLTV;
-        require(CurrentLTV < 74, "Your deposit is not enough to peg the LTV at the target %, try depositing a higher amount");
+        uint x = LTV-CurrentLTV;
+        require(CurrentLTV < LTV, "Your deposit is not enough to peg the LTV at the target %, try depositing a higher amount");
 
         AvalBorrow *= (uint(x)/100);
 
         return AvalBorrow;
     }
 
-    function CalcWithdrawLTV(uint ETHprice) internal returns(uint){
+    function CalcWithdrawLTV() internal returns(uint){
 
         // Desmos to make sure this equation works: https://www.desmos.com/calculator/auu4uxnmx3
         // (Yes its the same thing)
 
-        uint AvalBorrow;
-        (,AvalBorrow,) = fFEI.getAccountLiquidity(address(this));
+        (,uint AvalBorrow,) = cCollat.getAccountLiquidity(address(this));
 
-        uint FULL = fFEI.borrowBalanceCurrent(address(this)) + (CalcETHPrice(fETH.borrowBalanceCurrent(address(this))*(fETH.exchangeRateCurrent()/10**18), ETHprice) + AvalBorrow);
-        uint CurrentLTV = (FULL/fETH.borrowBalanceCurrent(address(this)))*100;
+        uint FULL = cCollat.borrowBalanceCurrent(address(this)) + AvalBorrow;
+        uint CurrentLTV = (FULL/cCollat.borrowBalanceCurrent(address(this)))*100;
 
-        uint x = 74-CurrentLTV;
-        require(CurrentLTV < 74, "Your withdraw is not enough to peg the LTV at the target %, try withdrawing a higher amount or 100%");
+        uint x = LTV-CurrentLTV;
+        require(CurrentLTV < LTV, "Your withdraw is not enough to peg the LTV at the target %, try withdrawing a higher amount or 100%");
 
-        uint AvalWithdraw = fFEI.balanceOf(address(this)) * (uint(x)/100);
+        uint AvalWithdraw = cCollat.balanceOf(address(this)) * (uint(x)/100);
 
         return AvalWithdraw;
 
@@ -187,14 +196,9 @@ abstract contract FlashClose {
 
     }
 
-    function CalcCollatPrice(uint Collatprice,uint Borrowprice, uint Slippage) internal returns (uint){
+    function CalcCollatPrice(uint Collatprice, uint Slippage) internal view returns (uint){
 
-        return (Collat.balanceOf(address(this))*Collatprice*Borrowprice)(Slippage/1000);
-    }
-
-    function CalcETHPrice(uint ETHprice, uint Slippage) internal returns (uint){
-
-        return (TRIBE.balanceOf(address(this))*(TRIBEprice/10^8)*(ETHprice/10**8))(Slippage/1000);
+        return((Collat.balanceOf(address(this))*(Collatprice/10**8))*(Slippage/10000));
     }
 }
 
@@ -240,17 +244,5 @@ interface Uniswap {
     // 0x7a250d5630b4cf539739df2c5dacb4c659f2488d
 
     function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] memory path, uint deadline) external view returns (uint256);
-
-}
-
-interface UniswapV3 {
-
-    // 0xE592427A0AEce92De3Edee1F18E0157C05861564
-
-    function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] memory path, uint deadline) external view returns (uint256);
-    function deposit(uint256 lusdAmount) external;
-    function withdraw(uint256 numShares) external;
-    function transfer(address to, uint256 amount) external;
-    function transferFrom(address from, address to, uint256 amount) external;
 
 }
