@@ -3,6 +3,8 @@
 // TL;DR: You are free to use this however you want, edit however you want, and integrate however you want
 // I (@LogETH) am not responsible for any damages that may happen from use of this contract.
 
+//  NOTE: THIS DOES NOT WORK YET, DONT USE IT.
+
 pragma solidity >=0.7.0 <0.9.0;
 
 // This contract unwinds any leveraged loan on any COMP based B/L platform like Compound.finance, Tranquil.finance, Market.xyz, and Rari.capital in a single click
