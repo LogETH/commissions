@@ -103,8 +103,8 @@ abstract contract FlashClose {
         while(cBorrow.borrowBalanceCurrent(you) > 0){
 
             //  Step 1: Withdraw the token you're lending.
-            cCollat.transferFrom(you, address(this), CalcWithdrawLTV());
-            cCollat.redeem(CalcWithdrawLTV());
+            cCollat.transferFrom(you, address(this), CalcWithdrawLTV(CollatPrice));
+            cCollat.redeem(CalcWithdrawLTV(CalcWithdrawLTV(CollatPrice)));
 
             //  Step 2: Swap Collat for Borrow.
             SWAP.swapExactTokensForTokens(Collat.balanceOf(address(this)), CalcCollatPrice(CollatPrice, Slippage), 
@@ -116,7 +116,9 @@ abstract contract FlashClose {
             //  Step 4: Repeat until your debt is zero.
         }
 
-        require(GetCurrentLTV() == 0, "Something went wrong"); // This probably will never happen but its just here just in case something unexpected happens for your safety.
+        Collat.transfer(you, Collat.balanceOf(address(this)));
+
+        require(GetCurrentLTV(CalcWithdrawLTV(CollatPrice)) < 50, "Something went wrong"); // This probably will never happen but its just here just in case something unexpected happens for your safety.
     }
 
     //  Functions that give you control over this address, sweep sends any gas token held by this contract to you
@@ -146,13 +148,13 @@ abstract contract FlashClose {
 
 // (msg.sender SHOULD NOT be used/assumed in any of these functions.)
 
-    function CalcWithdrawLTV() internal returns(uint){
+    function CalcWithdrawLTV(uint Collatprice) internal returns(uint){
 
         // Desmos to make sure this equation works: https://www.desmos.com/calculator/auu4uxnmx3
         // (Yes its the same thing)
 
-        uint x = LTV-GetCurrentLTV();
-        require(GetCurrentLTV() < LTV, "Your withdraw is not enough to peg the LTV at the target %, try withdrawing a higher amount or 100%");
+        uint x = LTV-GetCurrentLTV(Collatprice);
+        require(GetCurrentLTV(Collatprice) < LTV, "Your withdraw is not enough to peg the LTV at the target %, try withdrawing a higher amount or 100%");
 
         uint AvalWithdraw = cCollat.balanceOf(address(this)) * (uint(x)/100);
 
@@ -160,14 +162,14 @@ abstract contract FlashClose {
 
     }
 
-    function GetCurrentLTV() internal returns(uint){
+    function GetCurrentLTV(uint Collatprice) internal returns(uint){
 
         // Desmos to make sure this equation works: https://www.desmos.com/calculator/auu4uxnmx3
         // (Yes its the same thing)
 
         (,uint AvalBorrow,) = cCollat.getAccountLiquidity(address(this));
 
-        uint FULL = cCollat.borrowBalanceCurrent(address(this)) + AvalBorrow;
+        uint FULL = CalcBorrowPrice(cBorrow.borrowBalanceCurrent(address(this)), Collatprice) + AvalBorrow;
         uint CurrentLTV = (FULL/cCollat.borrowBalanceCurrent(address(this)))*100;
 
         return CurrentLTV;
@@ -177,6 +179,11 @@ abstract contract FlashClose {
     function CalcCollatPrice(uint Collatprice, uint Slippage) internal view returns (uint){
 
         return((Collat.balanceOf(address(this))*(Collatprice/10**8))*(Slippage/10000));
+    }
+
+    function CalcBorrowPrice(uint amount, uint Collatprice) internal pure returns (uint){
+
+        return(amount/(Collatprice/10**8));
     }
 }
 
