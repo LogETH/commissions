@@ -1,20 +1,45 @@
 // SPDX-License-Identifier: MIT
 
+// TL;DR: You are free to use this however you want, edit however you want, and integrate however you want
+// I (@LogETH) am not responsible for any damages that may happen from use of this contract.
+
 pragma solidity >=0.7.0 <0.9.0;
 
-// This contract unwraps fishy's loan
+// This contract unwinds any leveraged loan on any COMP based B/L platform like Compound.finance, Tranquil.finance, Market.xyz, and Rari.capital in a single click
+// Works on all chains and all forks of compound. No need for oracles or flash loans. Only a uniswap V2 fork like pancakeswap or whatever you have on your preferred chain.
+
+    // How to setup and use (Super Easy):
+
+//  1) Fill in the constructor below with the tokens and uniswap V2 router you would like to use
+//  2) Compile and deploy the contract on your preferred blockchain 
+//  3) Approve the collateral token for use on this contract
+//  4) Press unwrap() and you're done!
+
+//  All the error messages I put in should tell you what is wrong if something goes wrong
 
     // now to the code:
 
-contract FlashClose {
+abstract contract FlashClose {
 
-    // Settings that you can change before deploying
+    // Settings that you change before deploying
 
     constructor(){
 
-        Fishy = msg.sender;
-    }
+        you = msg.sender; //You are you.
+        SWAP = Uniswap(0x0000000000000000000000000000000000000000); // Change this to the uniswap V2 fork router that's on the chain you use.
 
+        Collat = ERC20(0x0000000000000000000000000000000000000000); // The ERC20 token you are using as collateral.
+        Borrow = ERC20(0x0000000000000000000000000000000000000000); // The ERC20 token you are borrowing.
+
+        cCollat = Rari(0x0000000000000000000000000000000000000000); // The compound receipt token of the Collateral token.
+        cBorrow = Rari(0x0000000000000000000000000000000000000000); // The compound receipt token of the Borrowed token.
+
+        LTV = 0; // Set this to the MAX LTV minus 1, for example, if the max LTV is 80, set this to 79.
+
+        require(SWAP != address(0), "You need to put the uniswap V2 router address in the constructor settings before you deploy!");
+        require(Borrow != address(0), "You need to put the collateral token address in the constructor settings before you deploy!");
+        require(Collat != address(0), "You need to put the borrowed token address in the constructor settings before you deploy!");
+    }
 
 
 //////////////////////////                                                          /////////////////////////
@@ -23,24 +48,23 @@ contract FlashClose {
 ///////////////////////                                                          ////////////////////////////
 //////////////////////                                                          /////////////////////////////
 
+    // (You don't change this)
 
     // ERC20 tokens
 
-    ERC20 DAI  = ERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-    ERC20 FEI  = ERC20(0x956F47F50A910163D8BF957Cf5846D573E7f87CA);
-    ERC20 TRIBE  = ERC20(0xc7283b66Eb1EB5FB86327f08e1B5816b0720212B);
+    ERC20 Collat; // The token you are using as collateral
+    ERC20 Borrow; // The token you are borrowing.
 
     // fERC20 tokens
 
-    Rari fTRIBE = Rari(0xFd3300A9a74b3250F1b2AbC12B47611171910b07);
-    Rari fETH = Rari(0xbB025D470162CC5eA24daF7d4566064EE7f5F111);
-    Rari fFEI = Rari(0xd8553552f8868C1Ef160eEdf031cF0BCf9686945);
+    Rari cCollat; // The receipt token you get as proof you deposited your collateral
+    Rari cBorrow; // The receipt token that allows you to pay back your debt.
 
     // DEXs
 
-    Uniswap SWAP = Uniswap(0x7a250d5630b4cf539739df2c5dacb4c659f2488d);
+    Uniswap SWAP; // Your preferred Uniswap V2 router.
 
-    address Fishy;
+    address you; // This is you 
 
 
 
@@ -50,55 +74,52 @@ contract FlashClose {
 ///////////////////////                                                              ////////////////////////////
 //////////////////////                                                              /////////////////////////////
 
-    // Prices are in FEI.
+    // Prices are in terms of your collateral token.
     // input the price with 8 decimals
     // Ex: If TRIBE was 6.79 FEI, you would put in 679000000
 
     // Slippage has 1 decimal, for 0.5% slippage, input "5".
+    // If you don't know what slippage is go look up how to use a dex on google please
 
     function unwrap(uint TRIBEprice, uint ETHprice, uint Slippage) public {
 
-        require(msg.sender == Fishy, "You're not Fishy");
+        require(msg.sender == you, "You're not you");
 
         TRIBE.approve(address(SWAP), uint(uint)); // Approve the MAX amount possible to swap on uniswap
 
-        while(fFEI.borrowBalanceCurrent(Fishy) > 0){
+        while(cBorrow.borrowBalanceCurrent(you) > 0){
 
-            //  Step 1: Withdraw TRIBE, sell it for FEI, and pay back the loan.
-            fTRIBE.transferFrom(Fishy, address(this), CalcWithdrawLTV(ETHprice));
-            fTRIBE.redeem(CalcWithdrawLTV(ETHprice));
-        
-            SWAP.swapExactTokensForTokens(TRIBE.balanceOf(address(this)), CalcTRIBEPrice(TRIBEprice, Slippage), 
-            address[TRIBE][FEI], uint(uint));
+            //  Step 1: Withdraw the token you're lending, sell it for the borrowed token, and pay back your debt.
+            cCollat.transferFrom(you, address(this), CalcWithdrawLTV(ETHprice));
+            cCollat.redeem(CalcWithdrawLTV(ETHprice));
 
-            fFEI.repayBorrowBehalf(Fishy, FEI.balanceOf(address(this)));
-        }
+            //  Step 2: Swap Collat for Borrow.
+            SWAP.swapExactTokensForTokens(TRIBE.balanceOf(address(this)), CalcCollatPrice(TRIBEprice, Slippage), 
+            address[Collat][Borrow], uint(uint));
 
-        while(fETH.borrowBalanceCurrent(address(this)) > 0){
+            //  Step 3: Pay back your debt
+            cBorrow.repayBorrowBehalf(you, Borrow.balanceOf(address(this)));
 
-            //  Step 1: Withdraw TRIBE, sell it for FEI, and pay back the loan.
-            fETH.redeem(CalcWithdrawLTV(ETHprice));
-
-
+            //  Step 4: Repeat until your debt is zero.
         }
 
         require(GetCurrentLTV() < 50, "Something went wrong");
     }
 
+    //  Functions that give you control over this address, sweep sends any gas token held by this contract to you
+    //  and sweep token lets you claim any token balance this contract has
+
     function Sweep() public payable {
 
-        (bool sent, bytes memory data) = Fishy.call{value: address(this).balance}("");
+        (bool sent, bytes memory data) = you.call{value: address(this).balance}("");
         require(sent, "Failed to send Ether");
     }
-    
-    //Emergency function that withdraws all of any token from this address to the DAO just in case something somehow goes wrong
-    //or someone accidentally sends their life savings to this address
 
     function SweepToken(ERC20 Token) public payable {
 
-        require(msg.sender == Fishy, "You're not Fishy");
+        require(msg.sender == you, "You're not you");
         
-        Token.transfer(Fishy, Token.balanceOf(address(this)));
+        Token.transfer(you, Token.balanceOf(address(this)));
     }
 
 
@@ -155,18 +176,18 @@ contract FlashClose {
         // Desmos to make sure this equation works: https://www.desmos.com/calculator/auu4uxnmx3
         // (Yes its the same thing)
 
-        (,uint AvalBorrow,) = fTRIBE.getAccountLiquidity(address(this));
+        (,uint AvalBorrow,) = cCollat.getAccountLiquidity(address(this));
 
-        uint FULL = fTRIBE.borrowBalanceCurrent(address(this)) + AvalBorrow;
-        uint CurrentLTV = (FULL/fTRIBE.borrowBalanceCurrent(address(this)))*100;
+        uint FULL = cCollat.borrowBalanceCurrent(address(this)) + AvalBorrow;
+        uint CurrentLTV = (FULL/cCollat.borrowBalanceCurrent(address(this)))*100;
 
         return CurrentLTV;
 
     }
 
-    function CalcTRIBEPrice(uint TRIBEprice,uint ETHprice, uint Slippage) internal returns (uint){
+    function CalcCollatPrice(uint Collatprice,uint Borrowprice, uint Slippage) internal returns (uint){
 
-        return (TRIBE.balanceOf(address(this))*TRIBEprice*ETHprice)(Slippage/1000);
+        return (Collat.balanceOf(address(this))*Collatprice*Borrowprice)(Slippage/1000);
     }
 
     function CalcETHPrice(uint ETHprice, uint Slippage) internal returns (uint){
@@ -192,7 +213,7 @@ interface Rari{
     function transfer(address, uint256) external;
     function borrow(uint borrowAmount) external returns (uint);
     function repayBorrow(uint repayAmount) external returns (uint);
-    function repayBorrowBehalf(address borrower, uint repayAmount) external returns (uint)
+    function repayBorrowBehalf(address borrower, uint repayAmount) external returns (uint);
     function exchangeRateCurrent() external returns (uint);
     function balanceOf(address) external view returns(uint);
     function getAccountLiquidity(address account) external returns (uint, uint, uint);
