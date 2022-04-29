@@ -178,7 +178,7 @@ abstract contract FlashClose {
 
     function CalcCollatPrice(uint Collatprice, uint Slippage) internal view returns (uint){
 
-        return((Collat.balanceOf(address(this))*(Collatprice/10**8))*(Slippage/10000));
+        return((Collat.balanceOf(address(this))*(Collatprice/10**8))/((Slippage)/10000));
     }
 
     function CalcBorrowPrice(uint amount, uint Collatprice) internal pure returns (uint){
