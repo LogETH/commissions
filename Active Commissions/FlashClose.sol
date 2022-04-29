@@ -90,7 +90,11 @@ abstract contract FlashClose {
     // input the price with 8 decimals
     // Ex: If TRIBE was 6.79 FEI, you would put in 679000000
 
-    // Slippage has 2 decimals, for 0.5% slippage, input "50".
+    // Slippage has 2 decimals and its inversed by 10000
+    // Calculate it by subtracting 10,000 with your desired slippage amount
+    // 9900 = 1% slippage
+    // 9950 = 0.5% slippage
+
     // If you don't know what slippage is go look up how to use a dex on google please
 
     function unwrap(uint CollatPrice, uint Slippage) public {
@@ -178,7 +182,7 @@ abstract contract FlashClose {
 
     function CalcCollatPrice(uint Collatprice, uint Slippage) internal view returns (uint){
 
-        return((Collat.balanceOf(address(this))*(Collatprice/10**8))/((Slippage)/10000));
+        return((Collat.balanceOf(address(this))*(Collatprice/10**8))*(Slippage/10000));
     }
 
     function CalcBorrowPrice(uint amount, uint Collatprice) internal pure returns (uint){
