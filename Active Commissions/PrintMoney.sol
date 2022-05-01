@@ -116,7 +116,7 @@ abstract contract PrintMoney {
         POOL.withdraw((POOL.balanceOf(address(this))*percentage/100));
 
         //  Step 2: Swap all LUSD for DAI
-        LUSD3CRV.exchange_underlying(0, 1, LUSD.balanceOf(address(this)), (LUSD.balanceOf(address(this))*(Slippage/1000)));
+        LUSD3CRV.exchange_underlying(0, 1, LUSD.balanceOf(address(this)), Slippage*((LUSD.balanceOf(address(this))/1000)));
 
         //  Step 3: Wrap DAI into cDAI and pay back the loan on rari.capital.
         DAI.approve(address(cDAI), DAI.balanceOf(address(this)));
