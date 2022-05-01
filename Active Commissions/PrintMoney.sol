@@ -102,7 +102,7 @@ abstract contract PrintMoney {
         cDAI.redeem(cDAI.balanceOf(address(this)));
 
         //  Step 3: Swap DAI to LUSD on Curve.fi
-        LUSD3CRV.exchange_underlying(1, 0, DAI.balanceOf(address(this)), (DAI.balanceOf(address(this))*(Slippage/1000)));
+        LUSD3CRV.exchange_underlying(1, 0, DAI.balanceOf(address(this)), (Slippage*(DAI.balanceOf(address(this))/1000)));
 
         //  Step 4: Deposit all LUSD held by this address into the LUSD stability pool
         POOL.deposit(LUSD.balanceOf(address(this)));
