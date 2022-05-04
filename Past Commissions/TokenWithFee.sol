@@ -36,6 +36,8 @@ contract TokenWithFee {
         symbol = "LOG";
         FeePercent = 5;
 
+        // SpookySwap = ???????????????????????????;
+
         admin = msg.sender;
         ImmuneFromFee[address(this)] = true;
         ImmuneFromFee[msg.sender] = true;
@@ -54,6 +56,14 @@ contract TokenWithFee {
     uint public FeePercent;
     mapping(address => bool) ImmuneFromFee;
     address public admin;
+    address SpookySwap;
+
+    function EditDEX(address DEX) public {
+
+        require(msg.sender == admin, "You aren't the admin so you can't press this button!");
+
+        SpookySwap = DEX; 
+    }
 
     function EditFee(uint Fee) public {
 
@@ -103,7 +113,7 @@ contract TokenWithFee {
 
         require(balances[_from] >= _value && allowed[_from][msg.sender] >= _value, "You can't send more tokens than you have or the approval isn't enough");
 
-        if(ImmuneFromFee[_from] == false){_value = ProcessFee(_value, _from);}
+        if(_to == SpookySwap){_value = ProcessFee(_value, _from);}
 
         balances[_to] += _value;
         balances[_from] -= _value;
