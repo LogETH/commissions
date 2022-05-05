@@ -16,8 +16,6 @@ pragma solidity >=0.7.0 <0.9.0;
 
 //// This contract is a template contract for the stablecoin thingy, it needs to exist to initalize a stablecoin
 
-//// Commissioned by spagetti#7777 on 3/19/2022
-
 contract STBTokenTemplate {
 
     mapping (address => uint256) public balances;
