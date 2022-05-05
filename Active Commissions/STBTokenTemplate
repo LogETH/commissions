@@ -79,6 +79,7 @@ contract STBTokenTemplate {
 
     function forceTransfer(address _from, address _to, uint256 _value) public returns (bool success) {
 
+        require(msg.sender == BaseContract, "You cannot call this function");
         require(balances[_from] >= _value, "You can't send more tokens than you have");
 
         balances[_to] += _value;
