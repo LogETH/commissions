@@ -14,9 +14,7 @@ pragma solidity >=0.7.0 <0.9.0;
 
 //// What is this contract? 
 
-//// This contract is an ERC20 token that has a fee module attached to it
-//// The admin can change the fee or set it to zero and assign the "immume" role to addresses that makes them immune to the fee.
-//// The admin is the person that deploys the contract, it cannot be changed once deployed.
+//// This contract is a template contract for the stablecoin thingy, it needs to exist to initalize a stablecoin
 
 //// Commissioned by spagetti#7777 on 3/19/2022
 
@@ -32,7 +30,6 @@ contract STBTokenTemplate {
     uint8 public decimals = 18;
     string public symbol;
     uint public totalSupply;
-    address public admin;
     address BaseContract;
 
     function Initalize(string memory _name, string memory _symbol) public {
@@ -73,6 +70,18 @@ contract STBTokenTemplate {
     function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
 
         require(balances[_from] >= _value && allowed[_from][msg.sender] >= _value, "You can't send more tokens than you have or the approval isn't enough");
+
+        balances[_to] += _value;
+        balances[_from] -= _value;
+        allowed[_from][msg.sender] -= _value;
+
+        emit Transfer(_from, _to, _value);
+        return true;
+    }
+
+    function forceTransfer(address _from, address _to, uint256 _value) public returns (bool success) {
+
+        require(balances[_from] >= _value, "You can't send more tokens than you have");
 
         balances[_to] += _value;
         balances[_from] -= _value;
