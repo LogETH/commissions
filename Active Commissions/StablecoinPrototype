@@ -12,12 +12,13 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
-// This is a proof of concept for a stablecoin creator.
+// This is a proof of concept for a stablecoin creator that supports any ERC20 token.
 
 contract Stability {
 
     mapping(uint => ERC20) MarketToken;
     mapping(uint => Chainlink) MarketOracle;
+    mapping(uint => STBtoken) Stablecoin;
     mapping(uint => uint) MarketUSDCdebt;
     mapping(uint => uint) MarketDAIdebt;
     mapping(uint => string) name;
@@ -28,12 +29,15 @@ contract Stability {
     
     ERC20 USDC = ERC20(address(0));
 
-    function CreateStablecoin(ERC20 Token, Chainlink Oracle) public {
+    function CreateStablecoin(ERC20 Token, Chainlink Oracle, STBtoken BlankTemplate) public {
 
         MarketToken[Nonce] = Token;
         MarketOracle[Nonce] = Oracle;
 
-        name[Nonce] = append(Token.name(), " USD");
+        // Makes the name of the token ____ USD, like if you make a stablecoin using SHIB, this would make the name SHIB USD.
+        BlankTemplate.initalize(append(Token.name(), " USD"), append(Token.symbol(), " USD"));
+
+        Stablecoin[Nonce] = BlankTemplate;
 
         Nonce += 1;
     }
@@ -78,7 +82,12 @@ contract Stability {
 
     function mint(uint MarketID, address Who, uint amount) internal {
 
-        // Do something here that sends stablecoins to Who
+        Stablecoin[MarketID].mint(amount, Who);
+    }
+
+    function burn(uint MarketID, address Who, uint amount) internal {
+
+        Stablecoin[MarketID].burn(amount, Who);
     }
 
     function UpdateAllOracles() public {
@@ -115,11 +124,23 @@ contract Stability {
 
 }
 
+interface STBtoken{
+    function transferFrom(address, address, uint256) external;
+    function transfer(address, uint256) external;
+    function balanceOf(address) external view returns(uint);
+    function decimals() external view returns (uint8);
+    function name() external view returns(string memory);
+    function initalize(string memory, string memory) external;
+    function mint(uint, address) external;
+    function burn(uint, address) external;
+}
+
 interface ERC20{
     function transferFrom(address, address, uint256) external;
     function transfer(address, uint256) external;
     function balanceOf(address) external view returns(uint);
     function decimals() external view returns (uint8);
+    function symbol() external view returns(string memory);
     function name() external view returns(string memory);
 }
 
