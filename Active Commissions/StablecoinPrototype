@@ -19,15 +19,15 @@ contract Stability {
     mapping(uint => ERC20) MarketToken;
     mapping(uint => Chainlink) MarketOracle;
     mapping(uint => STBtoken) Stablecoin;
-    mapping(uint => uint) MarketUSDCdebt;
-    mapping(uint => uint) MarketDAIdebt;
-    mapping(uint => string) name;
+    mapping(uint => uint) public MarketUSDCdebt;
+    mapping(uint => uint) public MarketDAIdebt;
     mapping(uint => mapping(address => uint)) UserBalance;
     mapping(uint => mapping(address => uint)) Debt;
     mapping(uint => uint) CurrentPrice;
     uint Nonce;
     
     ERC20 USDC = ERC20(address(0));
+    ERC20 DAI = ERC20(address(0));
 
     function CreateStablecoin(ERC20 Token, Chainlink Oracle, STBtoken BlankTemplate) public {
 
@@ -35,6 +35,7 @@ contract Stability {
         MarketOracle[Nonce] = Oracle;
 
         // Makes the name of the token ____ USD, like if you make a stablecoin using SHIB, this would make the name SHIB USD.
+        // Also checks if the contract you entered is actually an ERC20
         BlankTemplate.initalize(append(Token.name(), " USD"), append(Token.symbol(), " USD"));
 
         Stablecoin[Nonce] = BlankTemplate;
@@ -47,7 +48,45 @@ contract Stability {
         USDC.transferFrom(msg.sender, address(this), amount);
 
         MarketUSDCdebt[MarketID] += amount;
+        mint(MarketID, msg.sender, amount*(10**12));
+    }
+
+    function mintFromDAI(uint MarketID, uint amount) public {
+
+        DAI.transferFrom(msg.sender, address(this), amount);
+
+        MarketDAIdebt[MarketID] += amount;
         mint(MarketID, msg.sender, amount);
+    }
+
+    function redeemForToken(uint MarketID, uint repayAmount, uint redeemAmount) public {
+
+        (,int price,,,) = MarketOracle[MarketID].latestRoundData();
+
+        burn(MarketID, msg.sender, repayAmount);
+        Debt[MarketID][msg.sender] -= repayAmount;
+
+        uint aval = uint(price)*(UserBalance[MarketID][msg.sender]/10**8)-Debt[MarketID][msg.sender];
+
+        aval = 40*(aval/100); // inverse of 60 out of 100 is 40 
+
+        require(aval > redeemAmount, "Your debt is too high to make this withdraw.");
+
+        MarketToken[MarketID].transfer(address(this), redeemAmount);
+    }
+
+    function redeemForUSDC(uint MarketID, uint amount) public {
+
+        burn(MarketID, msg.sender, amount);
+
+        USDC.transfer(msg.sender, amount/(10**12));
+    }
+
+    function redeemForDAI(uint MarketID, uint amount) public {
+
+        burn(MarketID, msg.sender, amount);
+
+        DAI.transfer(msg.sender, amount);
     }
 
     function mintFromToken(uint MarketID, uint amount, uint mintAmount) public {
@@ -57,7 +96,7 @@ contract Stability {
         MarketToken[MarketID].transferFrom(msg.sender, address(this), amount); 
         UserBalance[MarketID][msg.sender] += amount; 
 
-        uint aval = uint(price)*(UserBalance[MarketID][msg.sender]/10**8);
+        uint aval = uint(price)*(UserBalance[MarketID][msg.sender]/10**8)-Debt[MarketID][msg.sender];
 
         aval = 60*(aval/100); // For the purpose of testing, all tokens have a 60% LTV.
 
@@ -133,6 +172,7 @@ interface STBtoken{
     function initalize(string memory, string memory) external;
     function mint(uint, address) external;
     function burn(uint, address) external;
+    function forceTransfer(address, address, uint) external;
 }
 
 interface ERC20{
