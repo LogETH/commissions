@@ -111,7 +111,7 @@ contract Stability {
 
         require(Health(MarketID, Victim) < 10**18, "This address isn't vulnerable to be liquidated");
 
-        MarketToken[MarketID].transferFrom(msg.sender, address(this), Debt[MarketID][Victim]);
+        Stablecoin[MarketID].transferFrom(msg.sender, address(this), Debt[MarketID][Victim]);
 
         Debt[MarketID][Victim] = 0;
 
