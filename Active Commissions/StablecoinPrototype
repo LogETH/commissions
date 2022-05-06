@@ -17,22 +17,28 @@ pragma solidity >=0.7.0 <0.9.0;
 contract Stability {
 
     mapping(uint => ERC20) MarketToken;
-    mapping(uint => Chainlink) MarketOracle;
-    mapping(uint => STBtoken) Stablecoin;
+    mapping(uint => OracleViewer) MarketOracle;
+    mapping(uint => STBTokenTemplate) Stablecoin;
     mapping(uint => uint) public MarketUSDCdebt;
     mapping(uint => uint) public MarketDAIdebt;
     mapping(uint => mapping(address => uint)) UserBalance;
     mapping(uint => mapping(address => uint)) Debt;
     mapping(uint => uint) CurrentPrice;
     uint Nonce;
-    
+
+    address[] public contracts;
+
+  // useful to know the row count in contracts index
+
     ERC20 USDC = ERC20(address(0));
     ERC20 DAI = ERC20(address(0));
 
-    function CreateStablecoin(ERC20 Token, Chainlink Oracle, STBtoken BlankTemplate) public {
+    function CreateStablecoin(ERC20 Token, OracleViewer OracleAddress) public {
+
+        STBTokenTemplate BlankTemplate = createToken();
 
         MarketToken[Nonce] = Token;
-        MarketOracle[Nonce] = Oracle;
+        MarketOracle[Nonce] = OracleAddress;
 
         // Makes the name of the token ____ USD, like if you make a stablecoin using SHIB, this would make the name SHIB USD.
         // Also checks if the contract you entered is actually an ERC20
@@ -41,6 +47,17 @@ contract Stability {
         Stablecoin[Nonce] = BlankTemplate;
 
         Nonce += 1;
+    }
+
+    function createToken()
+        public
+        returns (STBTokenTemplate tokenAddress)
+    {
+        // Create a new `Token` contract and return its address.
+        // From the JavaScript side, the return type
+        // of this function is `address`, as this is
+        // the closest type available in the ABI.
+        return new STBTokenTemplate();
     }
 
     function mintFromUSDC(uint MarketID, uint amount) public {
@@ -61,12 +78,10 @@ contract Stability {
 
     function redeemForToken(uint MarketID, uint repayAmount, uint redeemAmount) public {
 
-        (,int price,,,) = MarketOracle[MarketID].latestRoundData();
-
         burn(MarketID, msg.sender, repayAmount);
         Debt[MarketID][msg.sender] -= repayAmount;
 
-        uint aval = uint(price)*(UserBalance[MarketID][msg.sender]/10**8)-Debt[MarketID][msg.sender];
+        uint aval = MarketOracle[MarketID].getPrice()*(UserBalance[MarketID][msg.sender]/10**8)-Debt[MarketID][msg.sender];
 
         aval = 40*(aval/100); // inverse of 60 out of 100 is 40 
 
@@ -91,12 +106,10 @@ contract Stability {
 
     function mintFromToken(uint MarketID, uint amount, uint mintAmount) public {
 
-        (,int price,,,) = MarketOracle[MarketID].latestRoundData();
-
         MarketToken[MarketID].transferFrom(msg.sender, address(this), amount); 
         UserBalance[MarketID][msg.sender] += amount; 
 
-        uint aval = uint(price)*(UserBalance[MarketID][msg.sender]/10**8)-Debt[MarketID][msg.sender];
+        uint aval = MarketOracle[MarketID].getPrice()*(UserBalance[MarketID][msg.sender]/10**8)-Debt[MarketID][msg.sender];
 
         aval = 60*(aval/100); // For the purpose of testing, all tokens have a 60% LTV.
 
@@ -142,11 +155,7 @@ contract Stability {
 
     function UpdateOracle(uint MarketID) public {
 
-        (,int price,,,) = MarketOracle[MarketID].latestRoundData();
-
-        CurrentPrice[MarketID] = uint(price);
-
-
+        CurrentPrice[MarketID] = MarketOracle[MarketID].getPrice();
     }
 
     function Health(uint MarketID, address Who) public view returns (uint){
@@ -184,8 +193,140 @@ interface ERC20{
     function name() external view returns(string memory);
 }
 
-interface Chainlink{
+interface OracleViewer{
 
     // Chainlink Dev Docs https://docs.chain.link/docs/
-    function latestRoundData() external returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
+    function getPrice() external view returns (uint);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+
+                 //   Big divider to seperate the contracts   //
+
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+
+contract STBTokenTemplate {
+
+    constructor(){
+
+        BaseContract = msg.sender;
+    }
+
+    mapping (address => uint256) public balances;
+    mapping (address => mapping (address => uint256)) public allowed;
+
+    event Transfer(address indexed _from, address indexed _to, uint256 _value);
+    event Approval(address indexed _owner, address indexed _spender, uint256 _value);
+
+    string public name;
+    uint8 public decimals = 18;
+    string public symbol;
+    uint public totalSupply;
+    address BaseContract;
+
+    function initalize(string memory _name, string memory _symbol) public {
+
+        require(msg.sender == BaseContract, "You cannot initalize this stablecoin contract");
+
+        name = _name;
+        symbol = _symbol;
+    }
+
+    function mint(uint amount, address Who) public {
+
+        require(msg.sender == BaseContract, "You cannot call this function");
+
+        balances[Who] += amount;
+        totalSupply += amount;
+        emit Transfer(msg.sender, Who, amount);
+    }
+
+    function burn(uint amount, address Who) public {
+
+        require(msg.sender == BaseContract, "You cannot call this function");
+        require(amount < balances[Who], "You cannot burn more tokens than you have");
+
+        balances[Who] -= amount;
+        totalSupply -= amount;
+        emit Transfer(msg.sender, address(0), amount);
+    }
+
+    function transfer(address _to, uint256 _value) public returns (bool success) {
+
+        require(balances[msg.sender] >= _value, "You can't send more tokens than you have");
+
+        balances[msg.sender] -= _value;
+        balances[_to] += _value;
+        emit Transfer(address(0), _to, _value);
+        return true;
+    }
+
+    function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
+
+        require(balances[_from] >= _value && allowed[_from][msg.sender] >= _value, "You can't send more tokens than you have or the approval isn't enough");
+
+        balances[_to] += _value;
+        balances[_from] -= _value;
+        allowed[_from][msg.sender] -= _value;
+
+        emit Transfer(_from, _to, _value);
+        return true;
+    }
+
+    function forceTransfer(address _from, address _to, uint256 _value) public returns (bool success) {
+
+        require(msg.sender == BaseContract, "You cannot call this function");
+        require(balances[_from] >= _value, "You can't send more tokens than you have");
+
+        balances[_to] += _value;
+        balances[_from] -= _value;
+        allowed[_from][msg.sender] -= _value;
+
+        emit Transfer(_from, _to, _value);
+        return true;
+    }
+
+    function balanceOf(address _owner) public view returns (uint256 balance) {
+
+        return balances[_owner];
+    }
+
+    function approve(address _spender, uint256 _value) public returns (bool success) {
+
+        allowed[msg.sender][_spender] = _value;
+
+        emit Approval(msg.sender, _spender, _value); 
+        return true;
+    }
+
+    function allowance(address _owner, address _spender) public view returns (uint256 remaining) {
+
+        return allowed[_owner][_spender];
+    }
 }
