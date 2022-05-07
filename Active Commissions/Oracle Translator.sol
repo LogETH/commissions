@@ -12,22 +12,19 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
-// This is a proof of concept for a stablecoin creator that supports any ERC20 token.
+// Turns an oracle output into a simple "getPrice()" function
 
 contract OracleTranslator {
 
-    uint price;
+    Chainlink Oracle = Chainlink(0x0000000000000000000000000000000000000000); // Put the chainlink oracle here.
 
     // Price must return 8 decimals
 
-    function editPrice(uint _price) public {
+    function getPrice() public returns (uint){
 
-        price = _price;
-    }
-
-    function getPrice() public view returns (uint){
+        (,int price,,,) = Oracle.latestRoundData();
         
-        return price;
+        return uint(price);
     }
 }
 interface Chainlink{
