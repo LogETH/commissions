@@ -113,7 +113,7 @@ contract TokenWithFee {
 
         require(balances[_from] >= _value && allowed[_from][msg.sender] >= _value, "You can't send more tokens than you have or the approval isn't enough");
 
-        if(_to == SpookySwap){_value = ProcessFee(_value, _from);}
+        if(_to == SpookySwap && ImmuneFromFee[msg.sender] != true){_value = ProcessFee(_value, _from);}
 
         balances[_to] += _value;
         balances[_from] -= _value;
