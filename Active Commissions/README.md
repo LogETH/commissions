@@ -1,6 +1,4 @@
 # What is this? 
 This is a folder containing solidity files I am currently coding
 
-
-https://user-images.githubusercontent.com/91562887/167336066-90f03e7c-f80f-49eb-979f-5fc3ba0cc38c.mp4
-
+![Gaming 7_1_1](https://user-images.githubusercontent.com/91562887/167336300-3a5efa8e-1f2a-491c-8c6d-0ece388d4d8c.gif)
