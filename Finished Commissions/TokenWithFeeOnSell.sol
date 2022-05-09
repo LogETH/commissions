@@ -101,8 +101,6 @@ contract TokenWithFee {
 
         require(balances[msg.sender] >= _value, "You can't send more tokens than you have");
 
-        if(ImmuneFromFee[msg.sender] == false){_value = ProcessFee(_value, msg.sender);}
-
         balances[msg.sender] -= _value;
         balances[_to] += _value;
         emit Transfer(msg.sender, _to, _value);
