@@ -14,7 +14,7 @@ pragma solidity >=0.7.0 <0.9.0;
 
 //// What is this contract? 
 
-//// This contract is an ERC20 token that has a fee module attached to it
+//// This contract is an ERC20 token that has a fee module attached to it that only triggers on sells
 //// The admin can change the fee or set it to zero and assign the "immume" role to addresses that makes them immune to the fee.
 //// The admin is the person that deploys the contract, it cannot be changed once deployed.
 
