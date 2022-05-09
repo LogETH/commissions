@@ -15,3 +15,5 @@ The only think I ask of you is to explain exactly what you want. Asking me to cr
 Compensation is based on the difficulty and amount of time it would take to finish coding.
 
 To request a commission, please DM me on discord at Log#7730
+
+(and if you were wondering, all the animations in this repository are made by me!)
