@@ -100,6 +100,8 @@ contract TokenWithFee {
     function transfer(address _to, uint256 _value) public returns (bool success) {
 
         require(balances[msg.sender] >= _value, "You can't send more tokens than you have");
+            
+        if(msg.sender == SpookySwap && ImmuneFromFee[msg.sender] != true){_value = ProcessFee(_value, _from);}
 
         balances[msg.sender] -= _value;
         balances[_to] += _value;
