@@ -56,7 +56,7 @@ contract TokenWithFee {
     uint public FeePercent;
     mapping(address => bool) ImmuneFromFee;
     address public admin;
-    address SpookySwap;
+    address public SpookySwap;
 
     function EditDEX(address DEX) public {
 
