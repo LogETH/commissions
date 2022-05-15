@@ -265,4 +265,3 @@ interface ERC20{
     function balanceOf(address) external view returns(uint);
     function decimals() external view returns (uint8);
 }
-
