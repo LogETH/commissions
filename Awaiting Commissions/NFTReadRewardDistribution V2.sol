@@ -68,11 +68,16 @@ contract NFTRegisterRewardDistribution{
 
     // Functions that let the Admin of this contract change settings.
 
+    function SetNFT(NFT WhatNFT) public {
+    
+        require(msg.sender == admin, "You aren't the admin so you can't press this button");
+        require(OnePercent == NFT(address(0)), "You have already set the NFT");
+        OnePercent = WhatNFT;
+    }
+
     function EditToken(ERC20 Token) public {
 
         require(msg.sender == admin, "You aren't the admin so you can't press this button");
-        require(isContract(address(Token)) == true, "The address you put in is not a contract.");
-        require(Token.balanceOf(address(this)) > 0, "This contract's balance of the token you requested is zero! Add some tokens as rewards before switching the token.");
         NOKO = Token;
     }
 
@@ -88,7 +93,6 @@ contract NFTRegisterRewardDistribution{
     function SweepToken(ERC20 TokenAddress) public {
 
         require(msg.sender == admin, "You aren't the admin so you can't press this button");
-        require(isContract(address(TokenAddress)) == true, "The address you put in is not a contract.");
         require(TokenAddress != NOKO, "This token is currently being used as rewards! You cannot sweep it while its being used!");
         TokenAddress.transfer(msg.sender, TokenAddress.balanceOf(address(this)));
     }
@@ -236,14 +240,6 @@ contract NFTRegisterRewardDistribution{
 
         return totalRegistered;
     }
-
-    function isContract(address addr) internal view returns (bool) {
-
-        uint size;
-        assembly { size := extcodesize(addr) }
-        return size > 0;
-    }       
-
     
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Additional functions that are not part of the core functionality, if you add anything, please add it here ////
@@ -269,3 +265,4 @@ interface ERC20{
     function balanceOf(address) external view returns(uint);
     function decimals() external view returns (uint8);
 }
+
