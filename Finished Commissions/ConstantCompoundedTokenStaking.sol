@@ -152,6 +152,7 @@ contract TokenStaking{
 
             Limit += amt;
             InitalStake[msg.sender] -= amount - amt;
+            totalStaked -= amount - amt;
         }
         else {
 
@@ -159,7 +160,6 @@ contract TokenStaking{
         }
 
         TokensStaked[msg.sender] -= amount; // Reduces your recorded balance by the amount of tokens you withdrawed
-        totalStaked -= amount; // Reduces the coins you withdrawed to the total staked amount.
     }
 
     function UnstakeMax() public {
@@ -175,9 +175,10 @@ contract TokenStaking{
         uint amt = TokensStaked[msg.sender] - InitalStake[msg.sender]; // How many tokens you have earned.
         Limit += amt;
 
+        totalStaked -= InitalStake[msg.sender]; // Reduces the coins you withdrawed to the total staked amount.
+
         InitalStake[msg.sender] = 0;
         TokensStaked[msg.sender] = 0; // Reduces your recorded balance by the amount of tokens you withdrawed
-        totalStaked -= TokensStaked[msg.sender]; // Reduces the coins you withdrawed to the total staked amount.
     }
 
     // The compound button compounds EVERYONEs rewards, it can be called by anyone, but it has to be called manually.
