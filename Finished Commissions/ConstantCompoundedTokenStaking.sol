@@ -146,7 +146,7 @@ contract TokenStaking{
         require(amount <= TokensStaked[msg.sender], "You can't withdraw more tokens than you have deposited.");
         Token.transfer(msg.sender, amount); // Sends the "amount" you requested to your address
 
-        uint amt = CheckStakedBalance(msg.sender) - InitalStake[msg.sender]; // How many tokens you have earned.
+        uint amt = TokensStaked[msg.sender] - InitalStake[msg.sender]; // How many tokens you have earned.
 
         if(amount >= amt){
 
@@ -160,6 +160,24 @@ contract TokenStaking{
 
         TokensStaked[msg.sender] -= amount; // Reduces your recorded balance by the amount of tokens you withdrawed
         totalStaked -= amount; // Reduces the coins you withdrawed to the total staked amount.
+    }
+
+    function UnstakeMax() public {
+
+        require(TokensStaked[msg.sender] > 0, "You have no tokens to withdraw");
+        require(msg.sender != address(0), "What the fuck");
+
+        RecordReward(msg.sender); // Saves and compounds the msg.sender's rewards
+
+        require(TokensStaked[msg.sender] <= Token.balanceOf(address(this)), "This contract is out of tokens to give as rewards! Ask devs to do something!");
+        Token.transfer(msg.sender, TokensStaked[msg.sender]); // Sends all staked tokens to your address
+
+        uint amt = TokensStaked[msg.sender] - InitalStake[msg.sender]; // How many tokens you have earned.
+        Limit += amt;
+
+        InitalStake[msg.sender] = 0;
+        TokensStaked[msg.sender] = 0; // Reduces your recorded balance by the amount of tokens you withdrawed
+        totalStaked -= TokensStaked[msg.sender]; // Reduces the coins you withdrawed to the total staked amount.
     }
 
     // The compound button compounds EVERYONEs rewards, it can be called by anyone, but it has to be called manually.
