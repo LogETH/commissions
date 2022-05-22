@@ -74,7 +74,7 @@ contract SocialMediaThread{
     function PostComment(uint ThreadID, string memory Text) public {
 
         require(DoesThreadExist[ThreadID] == true, "The thread you're posting in does not exist!");
-        //require(NFT.balanceOf(msg.sender) >= 1, "You do not have permission to post a comment.");
+        require(NFT.balanceOf(msg.sender) >= 1, "You do not have permission to post a comment.");
 
         Comment[ThreadID][(CommentNonce[ThreadID]+1)] = Text;
         CommentWriter[ThreadID][CommentNonce[ThreadID]+1] = msg.sender;
