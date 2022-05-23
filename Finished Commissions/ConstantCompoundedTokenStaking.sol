@@ -239,7 +239,7 @@ contract TokenStaking{
 
     function CalculateDailyReward(address YourAddress) public view returns(uint){
 
-        return RewardFactor * (TokensStaked[YourAddress]/100);
+        return RewardFactor * (TokensStaked[YourAddress]/10000);
     }
 
     // This number is basically how much you would have if you staked one token from the start.
