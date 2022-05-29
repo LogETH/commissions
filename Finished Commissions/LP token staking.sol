@@ -140,18 +140,6 @@ contract TokenStaking{
 
     }
 
-    // If you use withdraw(), you forfeit your rewards 
-
-    function withdraw() public {
-
-        require(Staked[msg.sender] = true, "You have not deposited anything yet");
-
-        Token.transfer(msg.sender, StakedTokens[msg.sender]);
-
-        Staked[msg.sender] = false;
-        StakedTokens[msg.sender] = 0;
-    }
-
 //////////////////////////                                                              /////////////////////////
 /////////////////////////                                                              //////////////////////////
 ////////////////////////      Internal and external functions this contract has:      ///////////////////////////
