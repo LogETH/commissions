@@ -85,9 +85,8 @@ contract NFTRegisterRewardDistribution{
 
         require(msg.sender == admin, "You aren't the admin so you can't press this button");
 
-        RewardFactor = CalculateEmission(TokensPerNFT, HowManyBlocks, NOKO.decimals());
-
         SaveRewards();
+        RewardFactor = CalculateEmission(TokensPerNFT, HowManyBlocks, NOKO.decimals());
     }
 
     function SweepToken(ERC20 TokenAddress) public {
