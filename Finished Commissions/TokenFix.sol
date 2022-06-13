@@ -46,7 +46,7 @@ contract TokenWithFee {
         balances[0x7d6fB69f9bdE559c31465b0317be90D093AA5CF0] = c(245);
         balances[0xF92680c02afB5bCDF79fc546552e9607E848c193] = c(68);
         balances[0xF4513624FBDFeAfB4Ba7877E5Ea0c35c7d53414E] = c(31);
-
+        // and add the rest of them here...
 
     }
 
