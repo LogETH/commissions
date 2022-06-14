@@ -38,7 +38,7 @@ contract TokenStakingWithNFTlimit{
         admin = msg.sender;
 
         LimitFactor = 1000*10e6;
-        Token = ERC20(0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174); // This is USDC
+        Token = ERC20(0x04068DA6C83AFCFA0e13ba15A6696662335D5B75); // This is USDC on FTM network
 //      NFT = ????
     }
 
