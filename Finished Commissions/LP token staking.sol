@@ -76,7 +76,6 @@ contract TokenStaking{
 
     function SetDepositToken(ERC20 WhatToken) public {
 
-        require(Token == ERC20(address(0)), "The token has already been set, you cannot change it");
         require(msg.sender == admin, "You aren't the admin so you can't press this button");
         Token = WhatToken;
     }
