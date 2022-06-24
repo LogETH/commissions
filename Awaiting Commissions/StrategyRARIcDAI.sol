@@ -62,8 +62,8 @@ contract Strategy is BaseStrategy {
 
     function estimatedTotalAssets() public view override returns (uint256) {
 
-        // Add 26 decimals then divide (big to small) (rules 1 and 2 on line 40)
-        return div(div(mul(fcDAI.balanceOf(address(this)), 10e26), fcDAI.exchangeRateCurrent()),cDAI.exchangeRateCurrent());
+        // Add 46 decimals then divide (big to small) (rules 1 and 2 on line 40)
+        return div(div(mul(fcDAI.balanceOf(address(this)), 10e46), fcDAI.exchangeRateCurrent()),cDAI.exchangeRateCurrent());
     }
 
     function prepareReturn(uint256 _debtOutstanding) internal override returns(uint256 _profit, uint256 _loss, uint256 _debtPayment){
