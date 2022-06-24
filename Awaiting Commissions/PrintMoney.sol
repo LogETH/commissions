@@ -211,9 +211,7 @@ abstract contract PrintMoney {
 
         // Desmos to make sure this equation works: https://www.desmos.com/calculator/auu4uxnmx3
 
-        uint AvalBorrow;
-        uint a;
-        (a, AvalBorrow, a) = fcDAI.getAccountLiquidity(address(this));
+        (, uint AvalBorrow,) = fcDAI.getAccountLiquidity(address(this));
 
         uint FULL = fcDAI.borrowBalanceCurrent(address(this)) + AvalBorrow;
         uint CurrentLTV = (FULL/fcDAI.borrowBalanceCurrent(address(this)))*100;
@@ -231,9 +229,7 @@ abstract contract PrintMoney {
         // Desmos to make sure this equation works: https://www.desmos.com/calculator/auu4uxnmx3
         // (Yes its the same thing)
 
-        uint AvalBorrow;
-        uint a;
-        (a, AvalBorrow, a) = fcDAI.getAccountLiquidity(address(this));
+        (, uint AvalBorrow,) = fcDAI.getAccountLiquidity(address(this));
 
         uint FULL = fcDAI.borrowBalanceCurrent(address(this)) + AvalBorrow;
         uint CurrentLTV = (FULL/fcDAI.borrowBalanceCurrent(address(this)))*100;
