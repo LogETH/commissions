@@ -58,9 +58,9 @@ contract TokenStaking{
     mapping(address => uint) public TimeClaim;         // Keeps track of cooldowns for certain functions like Claim().
     mapping(address => bool) public Timelock;           // Keeps track of the status on a user's timelock.
     mapping(address => uint) public TimelockDuration;   // Keeps track of how long you have timelocked for
-    mapping(uint => address) user;
-    mapping(address => uint) PendingReward;
-    address admin;
+    mapping(uint => address) public user;
+    mapping(address => uint) public PendingReward;
+    address public admin;
     uint public totalStaked;                            // How many tokens are staked in total.
     uint public RewardFactor;                           // How many rewards in basis points are given per day
     uint Nonce;
@@ -250,7 +250,7 @@ contract TokenStaking{
 
     function CheckRewards(address YourAddress) public view returns (uint256){
 
-        return(CalculateRewards(YourAddress, CalculateTime(YourAddress)));
+        return(CalculateRewards(YourAddress, CalculateTime(YourAddress))) + PendingReward[YourAddress];
     }
 
 
