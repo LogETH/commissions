@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0
+/// SPDX-License-Identifier: AGPL-3.0
 // Feel free to change the license, but this is what we use
 
 // Feel free to change this version of Solidity. We support >=0.6.0 <0.7.0;
@@ -93,7 +93,9 @@ contract Strategy is BaseStrategy {
     function adjustPosition(uint256 _debtOutstanding) internal override {
 
         DAI.transferFrom(vault, address(this), _debtOutstanding); // Get DAI from vault
+        DAI.approve(address(cDAI), _debtOutstanding);
         cDAI.mint(DAI.balanceOf(address(this))); // Deposit into compound
+        cDAI.approve(address(fcDAI), cDAI.balanceOf(address(this)));
         fcDAI.mint(cDAI.balanceOf(address(this))); // Deposit into rari
 
         debtOutstanding = add(debtOutstanding, _debtOutstanding); // Keep track of debt to the vault
@@ -227,4 +229,3 @@ interface Comp {
     function transfer(address, uint256) external;
     function balanceOf(address) external view returns(uint);
 }
-
