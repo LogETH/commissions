@@ -81,9 +81,7 @@ contract Strategy is BaseStrategy {
         fcToken.redeemUnderlying(div(mul(add(_profit, _debtOutstanding), cToken.exchangeRateCurrent()), 10e18)); // Multiply then remove 18 decimals (big to small, Rule 2)
         cToken.redeemUnderlying(add(_profit, _debtOutstanding));
 
-        StampBalance = estimatedTotalAssets();
-
-        StampBalance = sub(StampBalance, _debtOutstanding);
+        StampBalance = sub(estimatedTotalAssets(), _debtOutstanding);
 
         _loss = 0; // It is impossible to lose money from this stratagy, so loss is always zero.
         // (Unless compound gets hacked.. but then this vault will probably be the least of your concerns.)
