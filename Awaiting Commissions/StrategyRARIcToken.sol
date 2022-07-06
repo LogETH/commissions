@@ -32,23 +32,29 @@ contract Strategy is BaseStrategy {
         // debtThreshold = 0;
         ETHDAI = Oracle(0x773616e4d11a78f511299002da57a0a94577f1f4);
 
+        want = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F); //This is DAI
+        fcToken = Rari(0x0000000000000000000000000000000000000000); // Replace with the actual fcToken address please.
+        cToken = Comp(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643); // This is cToken
+
         //Nothing else needed here
     }
 
     // LOGIC RULES:
 
-    // 1)  Conversions from DAI to cDAI or fcDAI require a decimal update (DAI has 18, cDAI and fcDAI have 8)
-    //      DAI -> cDAI (-10 decimals), cDAI -> DAI (+10 decimals)
-    //      Conversions from cDAI to fcDAI do not require a decimal update
+    // 1)  Conversions from DAI to cToken or fcToken require a decimal update (DAI has 18, cToken and fcToken have 8)
+    //      DAI -> cToken (-10 decimals), cToken -> DAI (+10 decimals)
+    //      Conversions from cToken to fcToken do not require a decimal update
     // 2)  All price oracles return the price conversion from the greater Currency to the lesser Currency in terms of value, 
     //      This means you multiply to go from Big -> Small, and divide to do the reverse.
-    //      ETH -> DAI -> cDAI -> fcDAI (Biggest to Smallest)
+    //      ETH -> DAI -> cToken -> fcToken (Biggest to Smallest)
 
-    IERC20 want = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F); //This is DAI
-    Rari fcDAI = Rari(0x0000000000000000000000000000000000000000); // Replace with the actual fcDAI address please.
-    Comp cDAI = Comp(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643); // This is cDAI
+    // The tokens:
 
-    // cDAI and fcDAI are auto compounding by default, so this contract needs to track its profits itself using this variable
+    IERC20 want;
+    Rari fcToken;
+    Comp cToken;
+
+    // cToken and fcToken are auto compounding by default, so this contract needs to track its profits itself using this variable
     uint StampBalance;
     // a chainlink oracle for ETH/DAI
     Oracle ETHDAI; 
@@ -57,13 +63,13 @@ contract Strategy is BaseStrategy {
 
     function name() external view override returns (string memory) {
 
-        return "StrategyRARIcDAI";
+        return "StrategyRARIcToken";
     }
 
     function estimatedTotalAssets() public view override returns (uint256) {
 
         // Add 46 decimals then divide (big to small) (rules 1 and 2 on line 40)
-        return div(div(mul(fcDAI.balanceOf(address(this)), 10e46), fcDAI.exchangeRateCurrent()),cDAI.exchangeRateCurrent());
+        return div(div(mul(fcToken.balanceOf(address(this)), 10e46), fcToken.exchangeRateCurrent()),cToken.exchangeRateCurrent());
     }
 
     function prepareReturn(uint256 _debtOutstanding) internal override returns(uint256 _profit, uint256 _loss, uint256 _debtPayment){
@@ -72,39 +78,34 @@ contract Strategy is BaseStrategy {
         // NOTE: Should try to free up at least `_debtOutstanding` of underlying position
 
         _profit = sub(estimatedTotalAssets(), StampBalance); // _profit is in DAI
-        fcDAI.redeemUnderlying(div(mul(_profit, cDAI.exchangeRateCurrent()), 10e18)); // Multiply then remove 18 decimals (big to small, Rule 2)
-        cDAI.redeemUnderlying(_profit);
+        fcToken.redeemUnderlying(div(mul(add(_profit, _debtOutstanding), cToken.exchangeRateCurrent()), 10e18)); // Multiply then remove 18 decimals (big to small, Rule 2)
+        cToken.redeemUnderlying(add(_profit, _debtOutstanding));
 
         StampBalance = estimatedTotalAssets();
-
-        fcDAI.redeemUnderlying(div(mul(_debtOutstanding , cDAI.exchangeRateCurrent()), 10e18)); // Multiply then remove 18 decimals (big to small, Rule 2)
-        cDAI.redeemUnderlying(_debtOutstanding);
 
         StampBalance = sub(StampBalance, _debtOutstanding);
 
         _loss = 0; // It is impossible to lose money from this stratagy, so loss is always zero.
         // (Unless compound gets hacked.. but then this vault will probably be the least of your concerns.)
 
-        _debtPayment = 0; // No debts are paid
+        _debtPayment = _debtOutstanding; // _debtOutstanding 'want' is freed up from the underlying position 
 
         return (_profit, _loss, _debtPayment);
     }
 
     function adjustPosition(uint256 _debtOutstanding) internal override {
 
-        DAI.transferFrom(vault, address(this), _debtOutstanding); // Get DAI from vault
-        DAI.approve(address(cDAI), _debtOutstanding);
-        cDAI.mint(DAI.balanceOf(address(this))); // Deposit into compound
-        cDAI.approve(address(fcDAI), cDAI.balanceOf(address(this)));
-        fcDAI.mint(cDAI.balanceOf(address(this))); // Deposit into rari
-
-        debtOutstanding = add(debtOutstanding, _debtOutstanding); // Keep track of debt to the vault
+        DAI.transferFrom(vault, address(this), _debtOutstanding);       // Get DAI from vault
+        DAI.approve(address(cToken), _debtOutstanding);
+        cToken.mint(DAI.balanceOf(address(this)));                        // Deposit into compound
+        cToken.approve(address(fcToken), cToken.balanceOf(address(this)));
+        fcToken.mint(cToken.balanceOf(address(this)));                      // Deposit into rari
 
         if(StampBalance == 0){StampBalance = estimatedTotalAssets();}
         else{
 
             // Multiply then remove 36 decimals (Big to small)
-            StampBalance = add(StampBalance, div(mul(mul(_debtOutstanding, fcDAI.exchangeRateCurrent()), cDAI.exchangeRateCurrent()), 10e36));
+            StampBalance = add(StampBalance, div(mul(mul(_debtOutstanding, fcToken.exchangeRateCurrent()), cToken.exchangeRateCurrent()), 10e36));
         }
     }
 
@@ -117,8 +118,8 @@ contract Strategy is BaseStrategy {
         // NOTE: Maintain invariant `want.balanceOf(this) >= _liquidatedAmount`
         // NOTE: Maintain invariant `_liquidatedAmount + _loss <= _amountNeeded`
 
-        fcDAI.redeemUnderlying(div(mul(_amountNeeded, (cDAI.exchangeRateCurrent()), 10e18))); // Multiply then remove 18 decimals (big to small)
-        cDAI.redeemUnderlying(_amountNeeded); // redeem cDAI for DAI
+        fcToken.redeemUnderlying(div(mul(_amountNeeded, (cToken.exchangeRateCurrent()), 10e18))); // Multiply then remove 18 decimals (big to small)
+        cToken.redeemUnderlying(_amountNeeded); // redeem cToken for DAI
 
         StampBalance = sub(StampBalance, _amountNeeded);
 
@@ -132,8 +133,8 @@ contract Strategy is BaseStrategy {
     }
 
     function liquidateAllPositions() internal override returns (uint256) {
-        fcDAI.redeem(fcDAI.balanceOf(address(this))); // redeem all fcDAI for cDAI
-        cDAI.redeem(cDAI.balanceOf(address(this))); // redeem all cDAI for DAI
+        fcToken.redeem(fcToken.balanceOf(address(this))); // redeem all fcToken for cToken
+        cToken.redeem(cToken.balanceOf(address(this))); // redeem all cToken for DAI
         return want.balanceOf(address(this));
     }
 
@@ -143,7 +144,7 @@ contract Strategy is BaseStrategy {
         // TODO: Transfer any non-`want` tokens to the new strategy
         // NOTE: `migrate` will automatically forward all `want` in this strategy to the new one
 
-        fcDAI.transfer(_newStrategy, fcDAI.balanceOf(address(this)));
+        fcToken.transfer(_newStrategy, fcToken.balanceOf(address(this)));
     }
 
     // Override this to add all tokens/tokenized positions this contract manages
@@ -163,7 +164,7 @@ contract Strategy is BaseStrategy {
 
         address[] memory protected = new address[](2);
 
-        protected[0] = 0x0000000000000000000000000000000000000000; // Replace with the actual fcDAI address please.
+        protected[0] = 0x0000000000000000000000000000000000000000; // Replace with the actual fcToken address please.
         
         return protected;
     }
