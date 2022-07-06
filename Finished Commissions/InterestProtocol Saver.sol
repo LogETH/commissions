@@ -22,7 +22,8 @@ contract InterestProxy{
     // Step 1: Configure the contstructor to the values you want, make sure to double and triple check!
     // Step 2: Deploy the contract.
     // Step 3: Approve USDi for use on this contract.
-    // Step 4: Send some ETH to this contract for the bounty
+    // Step 4: Go to https://app.gelato.network/new-task to hook up this contract with gelato, set it to "whenever possible"
+    // Step 5: Gelato should already tell you this, but make sure you give enough ETH to their vault so it can activate this contract when it needs to
 
 
 //// Commissioned by Fishy#0007 on 6/17/2022
@@ -49,9 +50,9 @@ contract InterestProxy{
         MINLTV = 60;
     }
 
-    function ClaimBounty() public{
+    function execute() public{
 
-        require(MINLTV <= uint(CalculateLTV()), "The bounty cannot be claimed yet");
+        require(MINLTV <= uint(CalculateLTV()), "This function cannot be called yet");
 
         // Send all USDi from fishy to this contract
 
@@ -62,29 +63,28 @@ contract InterestProxy{
         if(Vault.vaultLiability(VaultID) < USDi.balanceOf(address(this))){Vault.repayAllUSDi(VaultID);}
         else{Vault.repayUSDi(VaultID, uint192(USDi.balanceOf(address(this))));}
 
-        // Give the bounty to the kind MEVer who called this (thank you)
-
-        (bool sent,) = msg.sender.call{value: bounty}("");
-        require(sent, "Looks like someone claimed the bounty first, sorry!");
-
         // Send any remaining USDi to fishy
 
         USDi.transfer(admin, USDi.balanceOf(address(this)));
     
     }
 
-    // Functions that let you change values like the trigger LTV or the bounty amount
+    // Functions that let you change values like the trigger LTV
 
-    function EditBounty(uint HowMuch) public onlyAdmin{bounty = HowMuch;}
     function EditTriggerLTV(uint HowMuch) public onlyAdmin{MINLTV = HowMuch;}
     function EditVaultID(uint96 WhatID) public onlyAdmin{VaultID = WhatID;}
 
     // You can withdraw extra ETH held by this contract using this function
 
-    function withdrawETH(uint HowMuch) public onlyAdmin{
+    function sweep() public onlyAdmin{
 
-        (bool sent,) = admin.call{value: HowMuch}("");
-        require(sent, "Looks like someone claimed the bounty first, sorry!");
+        (bool sent,) = admin.call{value: (address(this)).balance}("");
+        require(sent, "transfer failed");
+    }
+
+    function sweepToken(ERC20 WhatToken) public onlyAdmin{
+
+        WhatToken.transfer(admin, WhatToken.balanceOf(address(this)));
     }
 
     // a function that lets MEVers know if the bounty is claimable or not
@@ -100,21 +100,6 @@ contract InterestProxy{
         // Your LTV
 
         return (Vault.vaultLiability(VaultID)*10)/FULLLTV;
-    }
-
-    function DEBUG() public view returns(uint192){
-
-        return Vault.vaultLiability(VaultID);
-    }
-
-    function DEBUG2() public view returns(uint192){
-
-        return Vault.vaultBorrowingPower(VaultID);
-    }
-
-    function DEBUG3() public view returns(uint192){
-
-        return Vault.vaultLiability(VaultID) + Vault.vaultBorrowingPower(VaultID);
     }
 }
 
