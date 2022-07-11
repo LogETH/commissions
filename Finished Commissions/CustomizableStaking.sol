@@ -161,7 +161,7 @@ contract TokenStaking{
     function Unstake(uint amount) public {
 
         require(block.timestamp - TimeFactor[msg.sender] > WithdrawTime, "You cannot withdraw as the withdraw cooldown is active");
-        require(block.timestamp - TimelockDuration[msg.sender] > WithdrawTime || WithdrawTime == 0, "You cannot withdraw as your timelock is not complete.");
+        require(block.timestamp - TimelockDuration[msg.sender] > TimeLockTime || TimeLockTime == 0, "You cannot withdraw as your timelock is not complete.");
         require(TokensStaked[msg.sender] > 0, "There is nothing to withdraw as you haven't staked anything");
 
         require(TokensStaked[msg.sender] >= amount, "You cannot withdraw more tokens than you have staked");
