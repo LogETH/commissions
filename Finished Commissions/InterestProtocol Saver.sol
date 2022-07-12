@@ -14,14 +14,14 @@ pragma solidity >=0.7.0 <0.9.0;
 
 contract InterestProxy{
 
-//// This contract is an attachment that allows you to use interestprotocol.io with a special feature that lets you place a bounty for MEVers
-//// that repay the loan in exchange for a bounty
+//// This contract is an attachment that allows you to use interestprotocol.io with a special feature that lets you automatically 
+//// pay off your debt when your LTV reaches a certain amount.
 
     // How to setup this contract
 
     // Step 1: Configure the contstructor to the values you want, make sure to double and triple check!
     // Step 2: Deploy the contract.
-    // Step 3: Approve USDi for use on this contract.
+    // Step 3: Manually pprove USDi for use on this contract using a block explorer.
     // Step 4: Go to https://app.gelato.network/new-task to hook up this contract with gelato, set it to "whenever possible"
     // Step 5: Gelato should already tell you this, but make sure you give enough ETH to their vault so it can activate this contract when it needs to
 
@@ -82,12 +82,14 @@ contract InterestProxy{
         require(sent, "transfer failed");
     }
 
+    // You can withdraw extra tokens held by this contract using this function
+
     function sweepToken(ERC20 WhatToken) public onlyAdmin{
 
         WhatToken.transfer(admin, WhatToken.balanceOf(address(this)));
     }
 
-    // a function that lets MEVers know if the bounty is claimable or not
+    // a function that calculates the LTV of your vault
 
     function CalculateLTV() public view returns(uint192){
 
