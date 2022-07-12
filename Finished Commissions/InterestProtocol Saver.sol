@@ -21,7 +21,7 @@ contract InterestProxy{
 
     // Step 1: Configure the contstructor to the values you want, make sure to double and triple check!
     // Step 2: Deploy the contract.
-    // Step 3: Manually pprove USDi for use on this contract using a block explorer.
+    // Step 3: Manually approve USDi for use on this contract using a block explorer.
     // Step 4: Go to https://app.gelato.network/new-task to hook up this contract with gelato, set it to "whenever possible"
     // Step 5: Gelato should already tell you this, but make sure you give enough ETH to their vault so it can activate this contract when it needs to
 
