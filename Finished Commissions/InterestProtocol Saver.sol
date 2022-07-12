@@ -71,7 +71,7 @@ contract InterestProxy{
 
     function execute() public{
 
-        require(MINLTV <= uint(CalculateLTV()), "This function cannot be called yet");
+        require(MINLTV >= uint(CalculateLTV()), "This function cannot be called yet");
 
         // Send all USDi from fishy to this contract
 
