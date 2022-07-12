@@ -30,25 +30,44 @@ contract InterestProxy{
 
     // the constructor that activates when you deploy the contract, this is where you change settings before deploying.
 
-    address public admin;
-    ERC20 USDi = ERC20(0x203c05ACb6FC02F5fA31bd7bE371E7B213e59Ff7);
-    VaultController public Vault = VaultController(0x385E2C6b5777Bc5ED960508E774E4807DDe6618c);
-    uint96 public VaultID;
-    uint public bounty;
-    uint public MINLTV;
-
-    modifier onlyAdmin{
-
-        require(admin == msg.sender, "You can't call this admin function because you are not the admin (duh)");
-        _;
-    }
-    
     constructor(){
 
         admin = msg.sender;
         VaultID = 57; // <------- MAKE SURE THIS IS RIGHT!!!!!!!
         MINLTV = 60;
     }
+
+//////////////////////////                                                          /////////////////////////
+/////////////////////////                                                          //////////////////////////
+////////////////////////            Variables that this contract has:             ///////////////////////////
+///////////////////////                                                          ////////////////////////////
+//////////////////////                                                          /////////////////////////////
+
+    // The ERC20 token and the Vault controller:
+
+    ERC20 USDi = ERC20(0x203c05ACb6FC02F5fA31bd7bE371E7B213e59Ff7);
+    VaultController public Vault = VaultController(0x385E2C6b5777Bc5ED960508E774E4807DDe6618c);
+
+    // All other variables
+
+    address public admin;
+    uint96 public VaultID;
+    uint public bounty;
+    uint public MINLTV;
+
+    // And modifiers
+
+    modifier onlyAdmin{
+
+        require(admin == msg.sender, "You can't call this admin function because you are not the admin (duh)");
+        _;
+    }
+
+//////////////////////////                                                              /////////////////////////
+/////////////////////////                                                              //////////////////////////
+////////////////////////             Visible functions this contract has:             ///////////////////////////
+///////////////////////                                                              ////////////////////////////
+//////////////////////                                                              /////////////////////////////
 
     function execute() public{
 
@@ -68,11 +87,6 @@ contract InterestProxy{
         USDi.transfer(admin, USDi.balanceOf(address(this)));
     
     }
-
-    // Functions that let you change values like the trigger LTV
-
-    function EditTriggerLTV(uint HowMuch) public onlyAdmin{MINLTV = HowMuch;}
-    function EditVaultID(uint96 WhatID) public onlyAdmin{VaultID = WhatID;}
 
     // You can withdraw extra ETH held by this contract using this function
 
@@ -103,6 +117,11 @@ contract InterestProxy{
 
         return (Vault.vaultLiability(VaultID)*10)/FULLLTV;
     }
+
+    // Functions that let you change values like the trigger LTV or the vault ID this contract reads
+
+    function EditTriggerLTV(uint HowMuch) public onlyAdmin{MINLTV = HowMuch;}
+    function EditVaultID(uint96 WhatID) public onlyAdmin{VaultID = WhatID;}
 }
 
 //////////////////////////                                                              /////////////////////////
