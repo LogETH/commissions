@@ -14,7 +14,7 @@ contract RegularToken {
 
     constructor () {
 
-        totalSupply = 1000000000 * 10e18;
+        totalSupply = 1000000000 * 10e18; // the total supply, you multiply it by 10e18 because 18 decimals
         name = "Fake USDC";
         symbol = "fUSDC";
 
@@ -28,20 +28,27 @@ contract RegularToken {
     event Transfer(address indexed _from, address indexed _to, uint256 _value);
     event Approval(address indexed _owner, address indexed _spender, uint256 _value);
 
+    // name is text, decimals is a number, the symbol is text, and the total supply is a number, blah blah blah
+    // Public so you can see what it is anytime
+
     string public name;
     uint8 public decimals;
     string public symbol;
     uint public totalSupply;
 
+    // The button you press to send tokens to someone
+
     function transfer(address _to, uint256 _value) public returns (bool success) {
 
         require(balanceOf[msg.sender] >= _value, "You can't send more tokens than you have");
 
-        balanceOf[msg.sender] -= _value;
-        balanceOf[_to] += _value;
+        balanceOf[msg.sender] -= _value; // Decreases your balance
+        balanceOf[_to] += _value; // Increases their balance, successfully sending the tokens
         emit Transfer(msg.sender, _to, _value);
         return true;
     }
+
+    // The function a DEX uses to trade your coins
 
     function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
 
@@ -54,6 +61,8 @@ contract RegularToken {
         emit Transfer(_from, _to, _value);
         return true;
     }
+
+    // The function you use to approve your tokens for trading
 
     function approve(address _spender, uint256 _value) public returns (bool success) {
 
