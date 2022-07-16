@@ -10,7 +10,7 @@ You are free to use these contracts yourself, but make sure to follow the rules 
 # How to commission a contract:
 If you need a contract coded, I’m your guy!
 
-The only think I ask of you is to explain exactly what you want. Asking me to create a token doesn’t really mean anything. A contract has buttons and logic; and you have to tell me what exactly you want those buttons to do or give me a general idea on what you want those buttons to be used for. 
+The only think I ask of you is to explain exactly what you want. Asking me to create a token with no other context doesn’t really mean anything. A contract has buttons and logic; and you have to tell me what exactly you want those buttons to do or give me a general idea on what you want those buttons to be used for. 
 
 Compensation is based on the difficulty and amount of time it would take to finish coding.
 
