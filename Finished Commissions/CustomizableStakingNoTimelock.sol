@@ -59,7 +59,7 @@ contract TokenStaking{
     mapping(uint => address) public user;
     mapping(address => uint) public PendingReward;
     address public admin;
-    uint public totalStaked;                            // How many tokens are staked in total.
+    uint totalStaked;                            // How many tokens are staked in total.
     uint public RewardFactor;                           // How many rewards in basis points are given per day
     uint Nonce;
     uint public MinimumTime;                            // The minimum amount of time until someone can claim rewards.
@@ -241,6 +241,11 @@ contract TokenStaking{
         assembly { size := extcodesize(addr) }
         return size > 0;
     }       
+
+    function displayTotalStaked() public view returns(uint){
+    
+        return totalStaked;
+    }
 
     
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
