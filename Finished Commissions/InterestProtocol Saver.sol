@@ -25,6 +25,7 @@ contract InterestAttachment{
     // Step 4: Go to https://app.gelato.network/new-task to hook up this contract with gelato, set it to activate "whenever possible"
     // Step 5: Gelato should already tell you this, but make sure you give enough ETH to their vault so it can activate this contract when it needs to
 
+//// You do not need to send any tokens to this contract, the USDi just needs to be in your address at the time of activation
 
 //// Commissioned by Fishy#0007 on 6/17/2022
 
@@ -74,7 +75,7 @@ contract InterestAttachment{
 
         require(MINLTV <= uint(CalculateLTV()), "This function cannot be called yet");
 
-        // Send all USDi from fishy to this contract
+        // Send all USDi from the admin to this contract
 
         USDi.transferFrom(admin, address(this), USDi.balanceOf(admin));
 
@@ -83,7 +84,7 @@ contract InterestAttachment{
         if(Vault.vaultLiability(VaultID) < USDi.balanceOf(address(this))){Vault.repayAllUSDi(VaultID);}
         else{Vault.repayUSDi(VaultID, uint192(USDi.balanceOf(address(this))));}
 
-        // Send any remaining USDi to fishy
+        // Send any remaining USDi to the admin
 
         USDi.transfer(admin, USDi.balanceOf(address(this)));
     
