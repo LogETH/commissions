@@ -12,7 +12,7 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
-contract InterestProxy{
+contract InterestAttachment{
 
 //// This contract is an attachment that allows you to use interestprotocol.io with a special feature that lets you automatically 
 //// pay off your debt when your LTV reaches a certain amount.
