@@ -19,7 +19,7 @@ contract InterestProxy{
 
     // How to setup this contract
 
-    // Step 1: Configure the contstructor to the values you want, make sure to double and triple check!
+    // Step 1: Configure the constructor to the values you want, make sure to double and triple check!
     // Step 2: Deploy the contract.
     // Step 3: Manually approve USDi for use on this contract using a block explorer.
     // Step 4: Go to https://app.gelato.network/new-task to hook up this contract with gelato, set it to activate "whenever possible"
