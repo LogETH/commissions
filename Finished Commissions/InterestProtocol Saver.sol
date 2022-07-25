@@ -45,8 +45,8 @@ contract InterestProxy{
 
     // The ERC20 token and the Vault controller:
 
-    ERC20 USDi = ERC20(0x203c05ACb6FC02F5fA31bd7bE371E7B213e59Ff7);
-    VaultController public Vault = VaultController(0x385E2C6b5777Bc5ED960508E774E4807DDe6618c);
+    ERC20 USDi = ERC20(0x2A54bA2964C8Cd459Dc568853F79813a60761B58);
+    VaultController public Vault = VaultController(0x4aaE9823Fb4C70490F1d802fC697F3ffF8D5CbE3);
 
     // All other variables
 
