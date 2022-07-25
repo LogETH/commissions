@@ -61,7 +61,7 @@ contract InterestAttachment{
 
     modifier onlyAdmin{
 
-        require(admin == msg.sender, "You can't call this admin function because you are not the admin (duh)");
+        require(admin == msg.sender, "Not admin");
         _;
     }
 
