@@ -44,6 +44,7 @@ contract InterestProxy{
 //////////////////////                                                          /////////////////////////////
 
     // The ERC20 token and the Vault controller:
+    // https://interestprotocol.io/book/docs/reference/DeployedContracts/index.html
 
     ERC20 USDi = ERC20(0x2A54bA2964C8Cd459Dc568853F79813a60761B58);
     VaultController public Vault = VaultController(0x4aaE9823Fb4C70490F1d802fC697F3ffF8D5CbE3);
