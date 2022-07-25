@@ -113,7 +113,7 @@ contract InterestAttachment{
 
         uint192 MAXLTV = Vault.vaultLiability(VaultID) + Vault.vaultBorrowingPower(VaultID);
 
-        return (Vault.vaultLiability(VaultID)*10)/MAXLTV;
+        return (Vault.vaultLiability(VaultID)*100)/MAXLTV;
     }
 
     // Functions that let you change values like the trigger LTV or the vault ID this contract reads
