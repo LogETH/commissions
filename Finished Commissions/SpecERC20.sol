@@ -22,6 +22,7 @@ pragma solidity >=0.7.0 <0.9.0;
 
     // How to Setup:
 
+    // Step 0: Deploy SpecERC20graph.sol
     // Step 1: Change the values in the constructor to the ones you want (make sure to double check as they cannot be changed)
     // Step 2: Deploy the contract
     // Step 3: Go to https://app.gelato.network/ and create a new task that executes "sendFee()" when it is available
