@@ -1,3 +1,0 @@
-Coming soon...
-
-Commissioned by a bird I met on a walk to my backyard
