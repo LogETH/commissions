@@ -440,7 +440,7 @@ contract SpecERC20 {
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(feeQueue, threshold, order, address(graph), type(uint256).max);
         graph.sweepToken(ERC20(wETH));
 
-        Wrapped(wETH).redeem(ERC20(wETH).balanceOf(address(this)));
+        Wrapped(wETH).withdraw(ERC20(wETH).balanceOf(address(this)));
 
         uint amt = (address(this).balance/4);
 
