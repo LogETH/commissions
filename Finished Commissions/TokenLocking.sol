@@ -35,7 +35,7 @@ contract TokenLocking{
         admin = msg.sender;
         start = block.timestamp;
 
-        Token = ERC20(???????????????????????????????????????);
+        Token = ERC20(0x4D9aA2Aac04Ce1Ba557D6008b28210F4187930A2);
 
         // The below sets up the index calculation, don't change this.
 
@@ -69,8 +69,10 @@ contract TokenLocking{
     uint Nonce;
     uint start;
     uint public Limit;
+    bool public pause;
 
     modifier AdminOnly{require(msg.sender == admin, "You aren't the admin so you can't press this button");_;}
+    modifier Pauseable{require(pause == false, "this function is currently paused");_;}
     
 
 //////////////////////////                                                              /////////////////////////
@@ -89,8 +91,33 @@ contract TokenLocking{
         Limit = limit;
     }
 
+//// Clears everyone's rewards (not their lock amount) and sets emissions to zero.
+
+    function ClearRewards() public AdminOnly{
+
+        WipeRewards();
+        RewardFactor = 0;
+    }
+
+//// Clears everyone's pending rewards (not their lock amount or set rewards) and sets emissions to zero.
+
+    function undo() public AdminOnly{
+
+        undoRewards();
+        RewardFactor = 0;
+    }
+
+    function addReward(address who, uint amount) public AdminOnly{
+
+        PendingCompound[who] += amount;
+    }
+
+    function subReward(address who, uint amount) public AdminOnly{
+
+        PendingCompound[who] -= amount;
+    }
+
     // If you don't know what basis points are go look it up
-    // If you change the emission rate, EVERYONE's rewards will be compounded.
 
     function EditEmission(uint BPSperDay) public AdminOnly{
 
@@ -100,14 +127,18 @@ contract TokenLocking{
 
     function SweepToken(ERC20 TokenAddress) public AdminOnly {
 
-        require(TokenAddress != Token, "You cannot sweep the reward token.");
         TokenAddress.transfer(msg.sender, TokenAddress.balanceOf(address(this))); 
+    }
+
+    function pauseContract(bool trueOrfalse) public AdminOnly {
+
+        pause = trueOrfalse;
     }
 
     // The Lock button Locks your tokens.
     // SECURITY WARNING, This address MUST be immune to the token fee or else things will break. (lol)
 
-    function Lock(uint amount) public {
+    function Lock(uint amount) public Pauseable{
 
         require(Limit != 0, "The global limit is set to zero, nobody can lock anything if its set to zero");
         require(totalLocked <= Limit*(10**Token.decimals()), "You cannot deposit anything has the MAX lock amount has been hit!");
@@ -130,13 +161,14 @@ contract TokenLocking{
 
     // ClaimRewards sends all avalable rewards to the msg.sender
 
-    function ClaimRewards() public {
+    function ClaimRewards() public Pauseable{
 
-        require(TokensLocked[msg.sender] > 0, "You haven't locked any tokens, so there's nothing for you to claim...");
+        require(TokensLocked[msg.sender] > 0, "You can't claim until you have locked some tokens");
 
         uint Unclaimed = CalculateRewards(msg.sender) + PendingCompound[msg.sender];
+        PendingCompound[msg.sender] = 0;
 
-        require(Unclaimed < Token.balanceOf(address(this)), "This contract has no more rewards to give out, uh oh");
+        require(Unclaimed < Token.balanceOf(address(this)), "This contract has no more rewards to give out");
         Token.transfer(msg.sender, Unclaimed);
 
         TimeLocked[msg.sender] = block.timestamp;
@@ -144,7 +176,7 @@ contract TokenLocking{
 
     // The compound button compounds the users rewards, be wary that this LOCKS your tokens again.
 
-    function Compound() public {
+    function Compound() public Pauseable{
 
         RecordReward(msg.sender); // Compounds the msg.sender's rewards
     }
@@ -202,6 +234,29 @@ contract TokenLocking{
         while(user[UserNonce] != address(0)){
 
             RecordReward(user[UserNonce]);
+            UserNonce += 1;
+        }
+    }
+
+    function WipeRewards() internal {
+
+        uint UserNonce = 1;
+
+        while(user[UserNonce] != address(0)){
+
+            PendingCompound[msg.sender] = 0;
+            TimeLocked[user[UserNonce]] = block.timestamp;
+            UserNonce += 1;
+        }
+    }
+
+    function undoRewards() internal {
+
+        uint UserNonce = 1;
+
+        while(user[UserNonce] != address(0)){
+
+            TimeLocked[user[UserNonce]] = block.timestamp;
             UserNonce += 1;
         }
     }
