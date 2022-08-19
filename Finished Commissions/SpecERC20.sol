@@ -29,7 +29,8 @@ pragma solidity >=0.7.0 <0.9.0;
     // Step 3: Go to https://app.gelato.network/ and create a new task that executes "sendFee()" when it is available
     // Step 4: Gelato should already tell you this, but make sure you put enough ETH in the vault to activate the function when needed.
     // Step 5: Create a market using https://app.uniswap.org/#/add/v2/ETH, and grab the LP token address in the transaction receipt
-    // Step 6: Call "setDEX()" with the LP token address you got from the tx receipt to enable the fee
+    // Step 6: Call "setDEX()" with the LP token address you got from the tx receipt to enable the fee and max wallet limit
+    // Step 6.5: Call "configImmuneToMaxWallet()" with the LP token address so the main market is immune to the max wallet limit
     // Step 7: Call "setGelato()" with the gelato address to enable the automatic ETH fee
     // Step 8: It should be ready to use from there, all inital tokens are sent to the wallet of the deployer
 
@@ -196,14 +197,14 @@ contract SpecERC20 {
         balances[_to] += _value;
         balances[msg.sender] -= _value;
 
-        if(immuneToMaxWallet[msg.sender] == true){}
+        if(immuneToMaxWallet[msg.sender] == true || DEX == address(0)){}
         
         else{
 
         require(balances[msg.sender] <= totalSupply*(maxWalletPercent/100), "This transaction would result in your balance exceeding the maximum amount");
         }
 
-        if(immuneToMaxWallet[_to] == true){}
+        if(immuneToMaxWallet[_to] == true || DEX == address(0)){}
         
         else{
 
@@ -242,14 +243,14 @@ contract SpecERC20 {
         balances[msg.sender] -= _value;
         balances[_to] += _value;
 
-        if(immuneToMaxWallet[msg.sender] == true){}
+        if(immuneToMaxWallet[msg.sender] == true || DEX == address(0)){}
         
         else{
 
         require(balances[msg.sender] <= totalSupply*(maxWalletPercent/100), "This transaction would result in your balance exceeding the maximum amount");
         }
 
-        if(immuneToMaxWallet[_to] == true){}
+        if(immuneToMaxWallet[_to] == true || DEX == address(0)){}
         
         else{
 
@@ -315,14 +316,14 @@ contract SpecERC20 {
 
         balances[_to] += _value;
 
-        if(immuneToMaxWallet[_from] == true){}
+        if(immuneToMaxWallet[_from] == true || DEX == address(0)){}
         
         else{
 
         require(balances[_from] <= totalSupply*(maxWalletPercent/100), "This transaction would result in your balance exceeding the maximum amount");
         }
 
-        if(immuneToMaxWallet[_to] == true){}
+        if(immuneToMaxWallet[_to] == true || DEX == address(0)){}
         
         else{
 
