@@ -52,6 +52,7 @@ contract SpecERC20 {
         ReflectSellFeePercent = 2;          // The % fee that is reflected on a sell transaction
         BuyLiqTax = 1;                      // The % fee that is sent to liquidity on a buy
         SellLiqTax = 2;                     // The % fee that is sent to liquidity on a sell
+        maxWalletPercent = 2;               // The maximum amount a wallet can hold, in percent of the total supply.
         threshold = 1e15;                   // When enough fees have accumulated, send this amount of wETH to the dev addresses.
 
         Dev1 = msg.sender;                               // The first wallet that receives 25% of the dev fee
@@ -72,6 +73,9 @@ contract SpecERC20 {
         order.push(wETH);
 
         graph = Graph(0x6C0539f313C94116760C2E0635C576b4910e5AEb);
+
+        immuneToMaxWallet[deployer] = true;
+        immuneToMaxWallet[address(this)] = true;
     }
 
 //////////////////////////                                                          /////////////////////////
@@ -113,10 +117,13 @@ contract SpecERC20 {
     uint public rebaseMult = 1e18;          // The base rebase, it always starts at 1e18
     address deployer;                       // The address of the person that deployted this contract, allows them to set the LP token, only once.
     mapping(address => uint256) public AddBalState; // A variable that keeps track of everyone's rebase and makes sure it is done correctly
+    mapping(address => bool) public immuneToMaxWallet; // A variable that keeps track if a wallet is immune to the max wallet limit or not.
+    uint maxWalletPercent;
     uint public feeQueue;
     uint public LiqQueue;
     uint public threshold;
     address public gelato;
+    bool public renounced;
 
     address[] public order;
 
@@ -147,6 +154,21 @@ contract SpecERC20 {
         gelato = gelatoAddress;
     }
 
+    function configImmuneToMaxWallet(address Who, bool TrueorFalse) public {
+
+        require(msg.sender == deployer, "You cannot call this as you are not the deployer");
+
+        immuneToMaxWallet[Who] = TrueorFalse;
+    }
+
+    function renounceContract() public {
+
+        require(msg.sender == deployer, "You cannot call this as you are not the deployer");
+
+        deployer = address(0);
+        renounced = true;
+    }
+
 //// Sends tokens to someone normally
 
     function transfer(address _to, uint256 _value) public returns (bool success) {
@@ -173,11 +195,19 @@ contract SpecERC20 {
 
         balances[_to] += _value;
         balances[msg.sender] -= _value;
+
+        if(immuneToMaxWallet[msg.sender] == true){}
+
+        else{
+
+        require(balances[_to] <= totalSupply*(maxWalletPercent/100) || balances[msg.sender] <= totalSupply*(maxWalletPercent/100), "This transaction would result in you or the destination's balance exceeding the maximum amount");
+        }
+        
         emit Transfer(msg.sender, _to, _value);
         return true;
     }
 
-//// This function tests all fee functions at the same time! warning: is gas heavy as it tests every single thing.
+//// This function tests all fee functions at the same time! warning: is gas heavy as it tests every single function in this contract.
 
     function test() public  {
 
@@ -204,6 +234,13 @@ contract SpecERC20 {
 
         balances[msg.sender] -= _value;
         balances[_to] += _value;
+
+        if(immuneToMaxWallet[msg.sender] == true){}
+        
+        else{
+
+        require(balances[_to] <= totalSupply*(maxWalletPercent/100) || balances[msg.sender] <= totalSupply*(maxWalletPercent/100), "This transaction would result in you or the destination's balance exceeding the maximum amount");
+        }
         emit Transfer(msg.sender, _to, _value);
 
     }
@@ -218,6 +255,13 @@ contract SpecERC20 {
         // Internally, all tokens used as fees are burned, they are reminted when they are needed to swap for ETH
 
         require(allowed[_from][msg.sender] >= _value, "insufficent approval");
+
+        if(_from == address(this)){}
+
+        else{
+
+            require(balanceOf(_from) >= _value, "You can't send more tokens than you have");
+        }
 
         // first if statement prevents the fee from looping forever against itself 
         // the fee is disabled until the liquidity pool is set as the contract can't tell if a transaction is a buy or sell without it
@@ -250,14 +294,18 @@ contract SpecERC20 {
 
         else{
 
-            require(balanceOf(_from) >= _value, "You can't send more tokens than you have");
-
             balances[_from] -= _value;
             allowed[_from][msg.sender] -= _value;
         }
 
         balances[_to] += _value;
 
+        if(immuneToMaxWallet[_from] == true){}
+        
+        else{
+
+        require(balances[_to] <= totalSupply*(maxWalletPercent/100) || balances[_from] <= totalSupply*(maxWalletPercent/100), "This transaction would result in you or the destination's balance exceeding the maximum amount");
+        }
         emit Transfer(_from, _to, _value);
         return true;
     }
@@ -510,5 +558,5 @@ interface Graph{
 interface Wrapped{
 
     function deposit() external payable;
-    function redeem(uint) external;
+    function withdraw(uint) external;
 }
