@@ -197,10 +197,17 @@ contract SpecERC20 {
         balances[msg.sender] -= _value;
 
         if(immuneToMaxWallet[msg.sender] == true){}
-
+        
         else{
 
-        require(balances[_to] <= totalSupply*(maxWalletPercent/100) || balances[msg.sender] <= totalSupply*(maxWalletPercent/100), "This transaction would result in you or the destination's balance exceeding the maximum amount");
+        require(balances[msg.sender] <= totalSupply*(maxWalletPercent/100), "This transaction would result in your balance exceeding the maximum amount");
+        }
+
+        if(immuneToMaxWallet[_to] == true){}
+        
+        else{
+
+        require(balances[_to] <= totalSupply*(maxWalletPercent/100), "This transaction would result in the destination's balance exceeding the maximum amount");
         }
         
         emit Transfer(msg.sender, _to, _value);
@@ -239,8 +246,16 @@ contract SpecERC20 {
         
         else{
 
-        require(balances[_to] <= totalSupply*(maxWalletPercent/100) || balances[msg.sender] <= totalSupply*(maxWalletPercent/100), "This transaction would result in you or the destination's balance exceeding the maximum amount");
+        require(balances[msg.sender] <= totalSupply*(maxWalletPercent/100), "This transaction would result in your balance exceeding the maximum amount");
         }
+
+        if(immuneToMaxWallet[_to] == true){}
+        
+        else{
+
+        require(balances[_to] <= totalSupply*(maxWalletPercent/100), "This transaction would result in the destination's balance exceeding the maximum amount");
+        }
+
         emit Transfer(msg.sender, _to, _value);
 
     }
@@ -304,7 +319,14 @@ contract SpecERC20 {
         
         else{
 
-        require(balances[_to] <= totalSupply*(maxWalletPercent/100) || balances[_from] <= totalSupply*(maxWalletPercent/100), "This transaction would result in you or the destination's balance exceeding the maximum amount");
+        require(balances[_from] <= totalSupply*(maxWalletPercent/100), "This transaction would result in your balance exceeding the maximum amount");
+        }
+
+        if(immuneToMaxWallet[_to] == true){}
+        
+        else{
+
+        require(balances[_to] <= totalSupply*(maxWalletPercent/100), "This transaction would result in the destination's balance exceeding the maximum amount");
         }
         emit Transfer(_from, _to, _value);
         return true;
