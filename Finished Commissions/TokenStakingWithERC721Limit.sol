@@ -20,7 +20,7 @@ contract TokenStakingWithERC721Limit{
     // How to Setup:
 
     // Step 1: Deploy the contract
-    // Step 2: Call EditToken() with the token address you want to use
+    // Step 2: Call EditToken() and EditNonFun() with the token and NFT address you want to use
     // Step 3: Call EditEmission() with how much % gain should be given out daily in basis points + an extra decimal (Look up what basis points are please).
     // Step 4: Send some tokens to this contract for rewards like how you would send anyone a token and boom, it works.
 
