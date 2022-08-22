@@ -56,12 +56,10 @@ contract SpecERC20 {
         maxWalletPercent = 2;               // The maximum amount a wallet can hold, in percent of the total supply.
         threshold = 1e15;                   // When enough fees have accumulated, send this amount of wETH to the dev addresses.
 
-        Dev1 = msg.sender;                               // The first wallet that receives 25% of the dev fee
-        Dev2 = msg.sender;                               // The second wallet that receives 25% of the dev fee
-        Dev3 = msg.sender;                               // The third wallet that receives 25% of the dev fee
-        Dev4 = msg.sender;                               // The fourth wallet that receives 25% of the dev fee
-        wETH = 0xc778417E063141139Fce010982780140Aa0cD5Ab;                     // The address of wrapped ether,
-        gelato;                                          // The address of the gelato contract that automatically calls the contract when conditions are met.
+        Dev1 = msg.sender;
+        Dev2 = 0x6B3Bd2b2CB51dcb246f489371Ed6E2dF03489A71;
+        wETH = 0xc778417E063141139Fce010982780140Aa0cD5Ab;
+        gelato;
 
         balances[msg.sender] = totalSupply; // a statement that gives the deployer of the contract the entire supply.
         deployer = msg.sender;              // a statement that marks the deployer of the contract so they can set the liquidity pool address
@@ -513,16 +511,12 @@ contract SpecERC20 {
 
         Wrapped(wETH).withdraw(ERC20(wETH).balanceOf(address(this)));
 
-        uint amt = (address(this).balance/4);
+        uint amt = (address(this).balance/5);
 
-        // Sends the newly swapped ETH to the 4 dev addresses
-
-        (bool sent1,) = Dev1.call{value: amt}("");
+        (bool sent1,) = Dev1.call{value: amt*4}("");
         (bool sent2,) = Dev2.call{value: amt}("");
-        (bool sent3,) = Dev3.call{value: amt}("");
-        (bool sent4,) = Dev4.call{value: amt}("");
 
-        require(sent1 && sent2 && sent3 && sent4, "transfer failed");
+        require(sent1 && sent2, "Transfer failed");
 
         feeQueue = 0;
     }
