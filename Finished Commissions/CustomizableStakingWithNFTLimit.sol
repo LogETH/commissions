@@ -12,7 +12,7 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
-contract TokenStaking{
+contract TokenLockingWithNFTLimit{
 
 //// This contract simply enables a staking system with a locking feature.
 //// THIS CONTRACT MUST BE IMMUNE TO/EXCLUDED FROM ANY FEE ON TRANSFER MECHANISMS.
