@@ -13,10 +13,11 @@ contract graph{
 
     constructor(){
 
-
+        admin = msg.sender;
     }
 
     BaseContract base;
+    address admin;
 
     function getValue(uint X) public pure returns (uint){
 
@@ -58,7 +59,8 @@ contract graph{
     }
 
     function SetBaseContract(BaseContract Contract) public {
-
+        
+        require(msg.sender == admin, "You cannot call this as you are not the admin");
         base = Contract;
     }
 }
