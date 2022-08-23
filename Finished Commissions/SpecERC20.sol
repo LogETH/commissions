@@ -71,7 +71,7 @@ contract SpecERC20 {
         order.push(address(this));
         order.push(wETH);
 
-        graph = Graph(0x6C0539f313C94116760C2E0635C576b4910e5AEb);
+        graph = Graph(0x71354c284d33e06DA96CAbe272bABe3deb2E6a91);
 
         immuneToMaxWallet[deployer] = true;
         immuneToMaxWallet[address(this)] = true;
@@ -199,14 +199,14 @@ contract SpecERC20 {
         
         else{
 
-        require(balances[msg.sender] <= totalSupply*(maxWalletPercent/100), "This transaction would result in your balance exceeding the maximum amount");
+        require(balances[msg.sender] <= maxWalletPercent*(totalSupply/100), "This transaction would result in your balance exceeding the maximum amount");
         }
 
         if(immuneToMaxWallet[_to] == true || DEX == address(0)){}
         
         else{
 
-        require(balances[_to] <= totalSupply*(maxWalletPercent/100), "This transaction would result in the destination's balance exceeding the maximum amount");
+        require(balances[_to] <= maxWalletPercent*(totalSupply/100), "This transaction would result in the destination's balance exceeding the maximum amount");
         }
         
         emit Transfer(msg.sender, _to, _value);
@@ -245,14 +245,14 @@ contract SpecERC20 {
         
         else{
 
-        require(balances[msg.sender] <= totalSupply*(maxWalletPercent/100), "This transaction would result in your balance exceeding the maximum amount");
+        require(balances[msg.sender] <= maxWalletPercent*(totalSupply/100), "This transaction would result in your balance exceeding the maximum amount");
         }
 
         if(immuneToMaxWallet[_to] == true || DEX == address(0)){}
         
         else{
 
-        require(balances[_to] <= totalSupply*(maxWalletPercent/100), "This transaction would result in the destination's balance exceeding the maximum amount");
+        require(balances[_to] <= maxWalletPercent*(totalSupply/100), "This transaction would result in the destination's balance exceeding the maximum amount");
         }
 
         emit Transfer(msg.sender, _to, _value);
@@ -318,14 +318,14 @@ contract SpecERC20 {
         
         else{
 
-        require(balances[_from] <= totalSupply*(maxWalletPercent/100), "This transaction would result in your balance exceeding the maximum amount");
+        require(balances[_from] <= maxWalletPercent*(totalSupply/100), "This transaction would result in your balance exceeding the maximum amount");
         }
 
         if(immuneToMaxWallet[_to] == true || DEX == address(0)){}
         
         else{
 
-        require(balances[_to] <= totalSupply*(maxWalletPercent/100), "This transaction would result in the destination's balance exceeding the maximum amount");
+        require(balances[_to] <= maxWalletPercent*(totalSupply/100), "This transaction would result in the destination's balance exceeding the maximum amount");
         }
         emit Transfer(_from, _to, _value);
         return true;
@@ -502,8 +502,6 @@ contract SpecERC20 {
 
     function sendFee() public {
 
-        require(msg.sender == gelato, "You cannot call this function");
-
         // Swaps the fee for wETH on the uniswap router and grabs it using the graph contract as a proxy
 
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(feeQueue, threshold, order, address(graph), type(uint256).max);
@@ -511,7 +509,7 @@ contract SpecERC20 {
 
         Wrapped(wETH).withdraw(ERC20(wETH).balanceOf(address(this)));
 
-        uint amt = (address(this).balance/5);
+        uint amt = 20*(address(this).balance/100);
 
         (bool sent1,) = Dev1.call{value: amt*4}("");
         (bool sent2,) = Dev2.call{value: amt}("");
