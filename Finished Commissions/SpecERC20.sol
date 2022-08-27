@@ -30,9 +30,7 @@ pragma solidity >=0.7.0 <0.9.0;
     // Step 4: Gelato should already tell you this, but make sure you put enough ETH in the vault to activate the function when needed.
     // Step 5: Create a market using https://app.uniswap.org/#/add/v2/ETH, and grab the LP token address in the transaction receipt
     // Step 6: Call "setDEX()" with the LP token address you got from the tx receipt to enable the fee and max wallet limit
-    // Step 6.5: Call "configImmuneToMaxWallet()" with the LP token address so the main market is immune to the max wallet limit
-    // Step 7: Call "setGelato()" with the gelato address to enable the automatic ETH fee
-    // Step 8: It should be ready to use from there, all inital tokens are sent to the wallet of the deployer
+    // Step 7: It should be ready to use from there, all inital tokens are sent to the wallet of the deployer
 
 //// Commissioned by a bird I met on a walk on 8/5/2022
 
@@ -141,6 +139,7 @@ contract SpecERC20 {
         require(DEX == address(0), "The LP token address is already set");
 
         DEX = LPtokenAddress;
+        immuneToMaxWallet[DEX] = true;
 
         this.approve(address(router), type(uint256).max); // Approves infinite tokens for use on uniswap v2
     }
