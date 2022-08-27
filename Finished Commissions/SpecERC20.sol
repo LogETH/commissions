@@ -450,7 +450,7 @@ contract SpecERC20 {
 
         // For gas savings, the buy liq fee is placed on a queue to be executed on the next sell transaction
 
-        feeQueue += fee;
+        LiqQueue += fee;
 
         emit Transfer(_payee, DEX, fee);
 
