@@ -83,7 +83,7 @@ contract SpecERC20 {
 
 //// Variables that make this contract ERC20 compatible (with metamask, uniswap, trustwallet, etc)
 
-    mapping(address => uint256) public balances;
+    mapping(address => uint256) private balances;
     mapping(address => mapping (address => uint256)) public allowed;
 
     string public name;
@@ -176,6 +176,8 @@ contract SpecERC20 {
         UpdateState(msg.sender);
         UpdateState(_to);
 
+        balances[msg.sender] -= _value;
+
         // Sometimes, a DEX can use transfer instead of transferFrom when buying a token, the buy fees are here just in case that happens
 
         if(msg.sender == address(this) || _to == address(this) || DEX == address(0)){}
@@ -192,7 +194,6 @@ contract SpecERC20 {
         }
 
         balances[_to] += _value;
-        balances[msg.sender] -= _value;
 
         if(immuneToMaxWallet[msg.sender] == true || DEX == address(0)){}
         
@@ -224,6 +225,8 @@ contract SpecERC20 {
         UpdateState(msg.sender);
         UpdateState(_to);
 
+        balances[msg.sender] -= _value;
+
             // All Buy functions
 
             _value = ProcessBuyFee(_value, msg.sender);          // Works
@@ -237,7 +240,6 @@ contract SpecERC20 {
             _value = ProcessSellLiq(_value, msg.sender);         // Works
             _value = ProcessSellBurn(_value, msg.sender);        // Works
 
-        balances[msg.sender] -= _value;
         balances[_to] += _value;
 
         if(immuneToMaxWallet[msg.sender] == true || DEX == address(0)){}
@@ -274,6 +276,8 @@ contract SpecERC20 {
         else{
 
             require(balanceOf(_from) >= _value, "You can't send more tokens than you have");
+            balances[_from] -= _value;
+            allowed[_from][msg.sender] -= _value;
         }
 
         // first if statement prevents the fee from looping forever against itself 
@@ -301,14 +305,6 @@ contract SpecERC20 {
             _value = ProcessBuyLiq(_value, _from);          // The buy fee that is added to the liquidity pool
             
             }
-        }
-
-        if(_from == address(this)){}
-
-        else{
-
-            balances[_from] -= _value;
-            allowed[_from][msg.sender] -= _value;
         }
 
         balances[_to] += _value;
@@ -399,7 +395,6 @@ contract SpecERC20 {
 
         uint fee = SellFeePercent*(_value/100);
         _value -= fee;
-        balances[_payee] -= fee;
         feeQueue += fee;
         
         return _value;
@@ -409,7 +404,6 @@ contract SpecERC20 {
 
         uint fee = BuyFeePercent*(_value/100);
         _value -= fee;
-        balances[_payee] -= fee;
         feeQueue += fee;
 
         return _value;
@@ -420,7 +414,6 @@ contract SpecERC20 {
         uint fee = ReflectBuyFeePercent*(_value/100);
         _value -= fee;
 
-        balances[_payee] -= fee;
         rebaseMult += fee*1e18/totalSupply;
 
         emit Transfer(_payee, address(this), fee);
@@ -433,7 +426,6 @@ contract SpecERC20 {
         uint fee = ReflectSellFeePercent*(_value/100);
         _value -= fee;
 
-        balances[_payee] -= fee;
         rebaseMult += fee*1e18/totalSupply;
 
         emit Transfer(_payee, address(this), fee);
@@ -444,7 +436,6 @@ contract SpecERC20 {
     function ProcessBuyLiq(uint _value, address _payee) internal returns(uint){
 
         uint fee = BuyLiqTax*(_value/100);
-        balances[_payee] -= fee;
 
         _value -= fee;
 
@@ -461,7 +452,6 @@ contract SpecERC20 {
     function ProcessSellLiq(uint _value, address _payee) internal returns(uint){
 
         uint fee = SellLiqTax*(_value/100);
-        balances[_payee] -= fee;
 
         _value -= fee;
 
@@ -482,10 +472,9 @@ contract SpecERC20 {
 
     function ProcessSellBurn(uint _value, address _payee) internal returns(uint){
 
-        uint fee = (5*(_value/100));
+        uint fee = (graph.getValue(_value*(balanceOf(_payee)/100))*(_value/100));
 
         _value -= fee;
-        balances[_payee] -= fee;
 
         emit Transfer(_payee, address(0), fee);
 
