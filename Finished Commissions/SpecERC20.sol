@@ -202,53 +202,6 @@ contract SpecERC20 {
         return true;
     }
 
-//// This function tests all fee functions at the same time! warning: is gas heavy as it tests every single function in this contract.
-
-    function test() public  {
-
-        uint _value = 1e18;
-        address _to = address(0);
-
-        require(balanceOf(msg.sender) >= _value, "You can't send more tokens than you have");
-
-        UpdateState(msg.sender);
-        UpdateState(_to);
-
-        balances[msg.sender] -= _value;
-
-            // All Buy functions
-
-            _value = ProcessBuyFee(_value, msg.sender);          // Works
-            _value = ProcessBuyReflection(_value, msg.sender);   // Works
-            _value = ProcessBuyLiq(_value, msg.sender);          // Works
-
-            // All Sell functions
-        
-            _value = ProcessSellFee(_value, msg.sender);         // Works
-            _value = ProcessSellReflection(_value, msg.sender);  // Works
-            _value = ProcessSellLiq(_value, msg.sender);         // Works
-            _value = ProcessSellBurn(_value, msg.sender);        // Works
-
-        balances[_to] += _value;
-
-        if(immuneToMaxWallet[msg.sender] == true || DEX == address(0)){}
-        
-        else{
-
-        require(balances[msg.sender] <= maxWalletPercent*(totalSupply/100), "This transaction would result in your balance exceeding the maximum amount");
-        }
-
-        if(immuneToMaxWallet[_to] == true || DEX == address(0)){}
-        
-        else{
-
-        require(balances[_to] <= maxWalletPercent*(totalSupply/100), "This transaction would result in the destination's balance exceeding the maximum amount");
-        }
-
-        emit Transfer(msg.sender, _to, _value);
-
-    }
-
 //// The function that DEXs use to trade tokens (FOR TESTING ONLY.)
 
     function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
@@ -257,14 +210,14 @@ contract SpecERC20 {
 
         require(allowed[_from][msg.sender] >= _value, "insufficent approval");
 
+        UpdateState(_from);
+        UpdateState(_to);
+
         if(_from == address(this)){}
 
         else{
 
             require(balanceOf(_from) >= _value, "You can't send more tokens than you have");
-
-            UpdateState(msg.sender);
-            UpdateState(_to);
 
             balances[_from] -= _value;
             allowed[_from][msg.sender] -= _value;
@@ -322,7 +275,7 @@ contract SpecERC20 {
 
         uint LocBalState;
 
-        if(_owner == DEX){
+        if(_owner == DEX || _owner == address(this)){
 
             return balances[DEX];
         }
@@ -385,6 +338,7 @@ contract SpecERC20 {
 
 
 //// ProcessFee() functions are called whenever there there needs to be a fee applied to a buy or sell
+//// Yes, this flags as yellow on purpose
 
     function ProcessSellFee(uint _value, address _payee) internal returns (uint){
 
@@ -480,7 +434,7 @@ contract SpecERC20 {
 
     function UpdateState(address Who) internal{
 
-        if(Who == DEX){
+        if(Who == DEX || Who == address(this)){
 
             return;
         }
@@ -521,14 +475,8 @@ contract SpecERC20 {
         feeQueue = 0;
     }
 
-    function DeployContract()
-        internal
-        returns (Graph graphAddress)
-    {
-        // Create a new `Token` contract and return its address.
-        // From the JavaScript side, the return type
-        // of this function is `address`, as this is
-        // the closest type available in the ABI.
+    function DeployContract() internal returns (Graph graphAddress){
+
         return new Graph();
     }
 
