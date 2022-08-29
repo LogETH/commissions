@@ -22,10 +22,8 @@ pragma solidity >=0.7.0 <0.9.0;
 
     // How to Setup:
 
-    // Step 0: Deploy SpecERC20graph.sol https://github.com/LogETH/commissions/blob/main/Finished%20Commissions/SpecERC20graph.sol
     // Step 1: Change the values in the constructor to the ones you want (make sure to double check as they cannot be changed)
     // Step 2: Deploy the contract
-    // Step 2.5: Call setBaseContract() on the graph contract with the address of this contract
     // Step 3: Go to https://app.gelato.network/ and create a new task that executes "sendFee()" when it is available
     // Step 4: Gelato should already tell you this, but make sure you put enough ETH in the vault to activate the function when needed.
     // Step 5: Create a market using https://app.uniswap.org/#/add/v2/ETH, and grab the LP token address in the transaction receipt
@@ -57,7 +55,6 @@ contract SpecERC20 {
         Dev1 = msg.sender;
         Dev2 = 0x6B3Bd2b2CB51dcb246f489371Ed6E2dF03489A71;
         wETH = 0xc778417E063141139Fce010982780140Aa0cD5Ab;
-        gelato;
 
         balances[msg.sender] = totalSupply; // a statement that gives the deployer of the contract the entire supply.
         deployer = msg.sender;              // a statement that marks the deployer of the contract so they can set the liquidity pool address
@@ -69,7 +66,8 @@ contract SpecERC20 {
         order.push(address(this));
         order.push(wETH);
 
-        graph = Graph(0x71354c284d33e06DA96CAbe272bABe3deb2E6a91);
+        graph = DeployContract();
+        graph.initalize(deployer, address(this));
 
         immuneToMaxWallet[deployer] = true;
         immuneToMaxWallet[address(this)] = true;
@@ -100,8 +98,8 @@ contract SpecERC20 {
 
 //// Variables that make the internal parts of this contract work, I explained them the best I could
 
-    Univ2 router;                           // The address of the uniswap router that swaps your tokens
-    Graph graph;                            // The address of the graph contract that grabs a number from a graph
+    Univ2 public router;                           // The address of the uniswap router that swaps your tokens
+    Graph public graph;                            // The address of the graph contract that grabs a number from a graph
 
     address Dev1;                           // Already explained in the constructor, go look there
     address Dev2;                           // ^
@@ -119,7 +117,6 @@ contract SpecERC20 {
     uint public feeQueue;
     uint public LiqQueue;
     uint public threshold;
-    address public gelato;
     bool public renounced;
 
     address[] public order;
@@ -142,14 +139,6 @@ contract SpecERC20 {
         immuneToMaxWallet[DEX] = true;
 
         this.approve(address(router), type(uint256).max); // Approves infinite tokens for use on uniswap v2
-    }
-
-    function SetGelato(address gelatoAddress) public {
-
-        require(msg.sender == deployer, "You cannot call this as you are not the deployer");
-        require(gelato == address(0), "The gelato address is already set");
-
-        gelato = gelatoAddress;
     }
 
     function configImmuneToMaxWallet(address Who, bool TrueorFalse) public {
@@ -264,9 +253,6 @@ contract SpecERC20 {
 
     function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
 
-        UpdateState(msg.sender);
-        UpdateState(_to);
-
         // Internally, all tokens used as fees are burned, they are reminted when they are needed to swap for ETH
 
         require(allowed[_from][msg.sender] >= _value, "insufficent approval");
@@ -276,6 +262,10 @@ contract SpecERC20 {
         else{
 
             require(balanceOf(_from) >= _value, "You can't send more tokens than you have");
+
+            UpdateState(msg.sender);
+            UpdateState(_to);
+
             balances[_from] -= _value;
             allowed[_from][msg.sender] -= _value;
         }
@@ -331,6 +321,11 @@ contract SpecERC20 {
     function balanceOf(address _owner) public view returns (uint256 balance) {
 
         uint LocBalState;
+
+        if(_owner == DEX){
+
+            return balances[DEX];
+        }
 
         if(AddBalState[_owner] == 0){
 
@@ -485,6 +480,11 @@ contract SpecERC20 {
 
     function UpdateState(address Who) internal{
 
+        if(Who == DEX){
+
+            return;
+        }
+
         if(AddBalState[Who] == 0){
 
             AddBalState[Who] = rebaseMult;
@@ -519,6 +519,17 @@ contract SpecERC20 {
         require(sent1 && sent2, "Transfer failed");
 
         feeQueue = 0;
+    }
+
+    function DeployContract()
+        internal
+        returns (Graph graphAddress)
+    {
+        // Create a new `Token` contract and return its address.
+        // From the JavaScript side, the return type
+        // of this function is `address`, as this is
+        // the closest type available in the ABI.
+        return new Graph();
     }
 
 
@@ -566,14 +577,63 @@ interface Univ2{
     function swapExactTokensForTokensSupportingFeeOnTransferTokens(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external;
 }
 
-interface Graph{
-
-    function getValue(uint X) external pure returns (uint);
-    function sweepToken(ERC20) external;
-}
-
 interface Wrapped{
 
     function deposit() external payable;
     function withdraw(uint) external;
+}
+
+
+contract Graph{
+
+
+    function initalize(address _admin, address basecontract) public{
+
+        admin = _admin;
+        base = BaseContract(basecontract);
+    }
+
+    BaseContract base;
+    address admin;
+
+    function getValue(uint X) public pure returns (uint){
+
+      if(X <= 20){
+        return 1;
+      }
+
+      if(X <= 40){
+        return 2;
+      }
+
+      if(X <= 60){
+        return 3;
+      }
+
+      if(X <= 80){
+        return 4;
+      }
+
+      if(X <= 100){
+        return 5;
+      }
+
+      return 0;
+    }
+
+    function sweepToken(ERC20 WhatToken) public {
+      require(msg.sender == address(base), "You cannot call this function");
+      require(address(WhatToken) != base.DEX(), "The LP tokens are burned forever! you can't take them out");
+
+      WhatToken.transfer(msg.sender, WhatToken.balanceOf(address(this)));
+    }
+
+    function SetBaseContract(BaseContract Contract) public {
+      require(msg.sender == admin, "You cannot call this as you are not the admin");
+      base = Contract;
+    }
+}
+
+interface BaseContract{
+  function DEX() external returns(address);
 }
