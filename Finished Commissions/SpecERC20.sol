@@ -111,6 +111,7 @@ contract SpecERC20 {
     address public wETH;                    // The address of wrapped ethereum
     uint public rebaseMult = 1e18;          // The base rebase, it always starts at 1e18
     address deployer;                       // The address of the person that deployted this contract, allows them to set the LP token, only once.
+    address deployerALT;
     mapping(address => uint256) public AddBalState; // A variable that keeps track of everyone's rebase and makes sure it is done correctly
     mapping(address => bool) public immuneToMaxWallet; // A variable that keeps track if a wallet is immune to the max wallet limit or not.
     uint maxWalletPercent;
@@ -154,6 +155,13 @@ contract SpecERC20 {
 
         deployer = address(0);
         renounced = true;
+    }
+
+    function editThreshold(uint ActivateWhen) public {
+
+        require(msg.sender == deployerALT, "You cannot call this as you are not the deployer");
+
+        threshold = ActivateWhen;
     }
 
 //// Sends tokens to someone normally
