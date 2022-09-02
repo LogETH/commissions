@@ -154,6 +154,8 @@ contract TokenStaking{
 
         RecordRewardALT(msg.sender);
         Token.transfer(msg.sender, PendingReward[msg.sender]);
+
+        PendingReward[msg.sender] = 0;
     }
 
     // The Unstake Button withdraws your tokens. It does not auto claim rewards.
