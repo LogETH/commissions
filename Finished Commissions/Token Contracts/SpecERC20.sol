@@ -310,12 +310,7 @@ contract SpecERC20 {
 
         uint dist = (rebaseMult - LocBalState) + 1e18;
 
-        if(LocBalState != 0 || dist != 0){
-
-            return (dist*balances[_owner])/1e18;
-        }
-
-        return balances[_owner];
+        return (dist*balances[_owner])/1e18;
     }
 
     function approve(address _spender, uint256 _value) public returns (bool success) {
@@ -454,11 +449,7 @@ contract SpecERC20 {
         }
 
         uint dist = (rebaseMult - AddBalState[Who]) + 1e18;
-
-        if(AddBalState[Who] != 0 || dist != 0){
-
-            balances[Who] = (dist*balances[Who])/1e18;
-        }
+        balances[Who] = (dist*balances[Who])/1e18;
 
         AddBalState[Who] = rebaseMult;
     }
