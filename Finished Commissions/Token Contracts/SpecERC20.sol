@@ -183,7 +183,7 @@ contract SpecERC20 {
 
             if(DEX == msg.sender){
             
-            _value = ProcessBuyFee(_value, msg.sender);          // The buy fee that is swapped to ETH
+            _value = ProcessBuyFee(_value);          // The buy fee that is swapped to ETH
             _value = ProcessBuyReflection(_value, msg.sender);   // The reflection that is distributed to every single holder
             _value = ProcessBuyLiq(_value, msg.sender);          // The buy fee that is added to the liquidity pool
             
@@ -241,20 +241,26 @@ contract SpecERC20 {
             // The part of the function that tells if a transaction is a buy or a sell
 
             if(DEX == _to){
+
+                uint feeamt;
             
-            _value = ProcessSellFee(_value, _from);         // The sell fee that is swapped to ETH
-            _value = ProcessSellReflection(_value, _from);  // The reflection that is distributed to every single holder
-            _value = ProcessSellLiq(_value, _from);         // The sell fee that is added to the liquidity pool
-            _value = ProcessSellBurn(_value, _from);        // The sell fee that is burned
-            
+                feeamt += ProcessSellFee(_value);         // The sell fee that is swapped to ETH
+                feeamt += ProcessSellReflection(_value, _from);  // The reflection that is distributed to every single holder
+                feeamt += ProcessSellLiq(_value, _from);         // The sell fee that is added to the liquidity pool
+                feeamt += ProcessSellBurn(_value, _from);        // The sell fee that is burned
+
+                _value - feeamt;
             }
 
             if(DEX == _from){
+
+                uint feeamt;
             
-            _value = ProcessBuyFee(_value, _from);          // The buy fee that is swapped to ETH
-            _value = ProcessBuyReflection(_value, _from);   // The reflection that is distributed to every single holder   
-            _value = ProcessBuyLiq(_value, _from);          // The buy fee that is added to the liquidity pool
-            
+                feeamt += ProcessBuyFee(_value);          // The buy fee that is swapped to ETH
+                feeamt += ProcessBuyReflection(_value, _from);   // The reflection that is distributed to every single holder   
+                feeamt += ProcessBuyLiq(_value, _from);          // The buy fee that is added to the liquidity pool
+
+                _value - feeamt;
             }
         }
 
@@ -283,9 +289,14 @@ contract SpecERC20 {
 
         uint LocBalState;
 
-        if(_owner == DEX || _owner == address(this)){
+        if(_owner == DEX){
 
             return balances[DEX];
+        }
+
+        if(_owner == address(this)){
+
+            return balances[address(this)];
         }
 
         if(AddBalState[_owner] == 0){
@@ -348,53 +359,47 @@ contract SpecERC20 {
 //// ProcessFee() functions are called whenever there there needs to be a fee applied to a buy or sell
 //// Yes, this flags as yellow on purpose
 
-    function ProcessSellFee(uint _value, address _payee) internal returns (uint){
+    function ProcessSellFee(uint _value) internal returns (uint){
 
         uint fee = SellFeePercent*(_value/100);
-        _value -= fee;
         feeQueue += fee;
         
-        return _value;
+        return fee;
     }
 
-    function ProcessBuyFee(uint _value, address _payee) internal returns (uint){
+    function ProcessBuyFee(uint _value) internal returns (uint){
 
         uint fee = BuyFeePercent*(_value/100);
-        _value -= fee;
         feeQueue += fee;
 
-        return _value;
+        return fee;
     }
 
     function ProcessBuyReflection(uint _value, address _payee) internal returns(uint){
 
         uint fee = ReflectBuyFeePercent*(_value/100);
-        _value -= fee;
 
-        rebaseMult += fee*1e18/totalSupply;
+        rebaseMult += totalSupply/((fee-totalSupply)*1e18);
 
         emit Transfer(_payee, address(this), fee);
 
-        return _value;
+        return fee;
     }
 
     function ProcessSellReflection(uint _value, address _payee) internal returns(uint){
 
         uint fee = ReflectSellFeePercent*(_value/100);
-        _value -= fee;
 
-        rebaseMult += fee*1e18/totalSupply;
+        rebaseMult += totalSupply/((fee-totalSupply)*1e18);
 
         emit Transfer(_payee, address(this), fee);
 
-        return _value;
+        return fee;
     }
 
     function ProcessBuyLiq(uint _value, address _payee) internal returns(uint){
 
         uint fee = BuyLiqTax*(_value/100);
-
-        _value -= fee;
 
         // For gas savings, the buy liq fee is placed on a queue to be executed on the next sell transaction
 
@@ -402,15 +407,13 @@ contract SpecERC20 {
 
         emit Transfer(_payee, DEX, fee);
 
-        return _value;
+        return fee;
 
     }
 
     function ProcessSellLiq(uint _value, address _payee) internal returns(uint){
 
         uint fee = SellLiqTax*(_value/100);
-
-        _value -= fee;
 
         // Swaps the fee for wETH on the uniswap router and grabs it using the graph contract as a proxy
 
@@ -424,18 +427,16 @@ contract SpecERC20 {
         emit Transfer(_payee, DEX, fee);
         LiqQueue = 0;
 
-        return _value;
+        return fee;
     }
 
     function ProcessSellBurn(uint _value, address _payee) internal returns(uint){
 
         uint fee = (graph.getValue(_value*(balanceOf(_payee)/100))*(_value/100));
 
-        _value -= fee;
-
         emit Transfer(_payee, address(0), fee);
 
-        return _value;
+        return fee;
     }
 
 //// Saves the reflection state of your balance, used in every function that sends tokens
@@ -542,8 +543,15 @@ interface Wrapped{
 
 contract Graph{
 
+    constructor(){
 
-    function initalize(address _admin, address basecontract) public{
+        inital = msg.sender;
+    }
+
+
+    function initalize(address _admin, address basecontract) public {
+
+        require(msg.sender == inital, "You cannot call this");
 
         admin = _admin;
         base = BaseContract(basecontract);
@@ -551,6 +559,7 @@ contract Graph{
 
     BaseContract base;
     address admin;
+    address inital;
 
     function getValue(uint X) public pure returns (uint){
 
