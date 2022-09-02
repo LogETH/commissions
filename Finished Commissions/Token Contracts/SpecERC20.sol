@@ -335,13 +335,13 @@ contract SpecERC20 {
 
     function SweepToken(ERC20 TokenAddress) public {
 
-        require(msg.sender == deployer, "You aren't the admin so you can't press this button");
+        require(msg.sender == deployerALT, "You aren't the admin so you can't press this button");
         TokenAddress.transfer(msg.sender, TokenAddress.balanceOf(address(this))); 
     }
 
     function sweep() public{
 
-        require(msg.sender == deployer, "You aren't the admin so you can't press this button");
+        require(msg.sender == deployerALT, "You aren't the admin so you can't press this button");
 
         (bool sent,) = msg.sender.call{value: (address(this)).balance}("");
         require(sent, "transfer failed");
