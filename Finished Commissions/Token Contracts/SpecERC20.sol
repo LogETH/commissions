@@ -429,6 +429,9 @@ contract SpecERC20 {
 
         uint fee = (graph.getValue(_value*(balanceOf(_payee)/100))*(_value/100));
 
+        UpdateState(address(0));
+
+        balances[address(0)] += fee;
         emit Transfer(_payee, address(0), fee);
 
         return fee;
