@@ -183,9 +183,13 @@ contract SpecERC20 {
 
             if(DEX == msg.sender){
             
-            _value = ProcessBuyFee(_value);          // The buy fee that is swapped to ETH
-            _value = ProcessBuyReflection(_value, msg.sender);   // The reflection that is distributed to every single holder
-            _value = ProcessBuyLiq(_value, msg.sender);          // The buy fee that is added to the liquidity pool
+                uint feeamt;
+            
+                feeamt += ProcessBuyFee(_value);          // The buy fee that is swapped to ETH
+                feeamt += ProcessBuyReflection(_value, msg.sender);   // The reflection that is distributed to every single holder   
+                feeamt += ProcessBuyLiq(_value, msg.sender);          // The buy fee that is added to the liquidity pool
+
+                _value - feeamt;
             
             }
         }
