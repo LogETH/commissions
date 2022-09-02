@@ -22,7 +22,8 @@ contract TokenStakingWithNFTlimit{
     // Step 1: Deploy the contract
     // Step 2: Call EditToken() with the token address you want to use
     // Step 3: Call EditEmission() with how much % gain should be given out daily in basis points + an extra decimal (Look up what basis points are please).
-    // Step 4: Send some reward tokens to this contract for rewards like how you would send anyone a token and boom, it works.
+    // Step 4: Call EditLimit() to change how many tokens someone can stake per NFT.
+    // Step 4: Send some tokens to this contract for rewards like how you would send anyone a token and boom, it works.
 
 
 //// Commissioned by spagetti#7777 on 6/14/2022
@@ -38,7 +39,7 @@ contract TokenStakingWithNFTlimit{
 
         LimitFactor = 1000*10e6;
         Token = ERC20(0x04068DA6C83AFCFA0e13ba15A6696662335D5B75); // This is USDC on FTM network
-        RewardToken;
+//      NFT = ????
     }
 
 
@@ -52,7 +53,7 @@ contract TokenStakingWithNFTlimit{
 //// The ERC20 Token and NFT:
 
     ERC20 Token;
-    ERC20 RewardToken;
+    ERC721 NFT;
 
 //// All the Variables that this contract uses (basically the dictionary for this contract)
 
@@ -83,20 +84,20 @@ contract TokenStakingWithNFTlimit{
         Token = WhatToken; // Changes the token (DOES NOT RESET REWARDS)
     }
 
-    function EditRewardToken(ERC20 WhatToken) public {
+    function EditLimitPerNFT(uint HowMuch) public {
 
         require(msg.sender == admin, "You aren't the admin so you can't press this button");
-        RewardToken = WhatToken; // Changes the token (DOES NOT RESET REWARDS)
+        LimitFactor = HowMuch; // Changes the staking limit per NFT
     }
 
     // If you don't know what basis points are go look it up, remember to add a single decimal though!
 
-    function EditEmission(uint HowManyRewardTokensPerDepositTokenPerDay) public {
+    function EditEmission(uint BPSperDay) public {
 
         require(msg.sender == admin, "You aren't the admin so you can't press this button");
 
         SaveRewards(); //Saves everyone's rewards
-        RewardFactor = HowManyRewardTokensPerDepositTokenPerDay; // Switches to the new reward percentage
+        RewardFactor = BPSperDay; // Switches to the new reward percentage
     }
 
     // Everyone asks what this does, it just sends stuck tokens to your address
@@ -104,6 +105,7 @@ contract TokenStakingWithNFTlimit{
     function SweepToken(ERC20 TokenAddress) public {
 
         require(msg.sender == admin, "You aren't the admin so you can't press this button");
+        require(TokenAddress != Token, "This token is currently being used as rewards! You cannot sweep it while its being used!");
         TokenAddress.transfer(msg.sender, TokenAddress.balanceOf(address(this))); 
     }
 
@@ -125,6 +127,8 @@ contract TokenStakingWithNFTlimit{
 
         totalStaked += amount; // Add the coins you deposited to the total staked amount
 
+        require(TokensStaked[msg.sender] <= calcLimit(msg.sender), "You have reached your staking limit! Get more NFTs to increase the limit!");
+
         Nonce += 1;
     }
 
@@ -133,7 +137,7 @@ contract TokenStakingWithNFTlimit{
         require(TokensStaked[msg.sender] > 0, "There is nothing to claim as you haven't staked anything");
 
         RecordRewardALT(msg.sender);
-        RewardToken.transfer(msg.sender, PendingReward[msg.sender]);
+        Token.transfer(msg.sender, PendingReward[msg.sender]);
 
         PendingReward[msg.sender] = 0;
     }
@@ -173,7 +177,7 @@ contract TokenStakingWithNFTlimit{
 
     function CalculateRewards(address YourAddress, uint256 StakeTime) internal view returns (uint256){
 
-        return (StakeTime * RewardFactor * (TokensStaked[YourAddress]))/86400;
+        return (StakeTime * RewardFactor * (TokensStaked[YourAddress]/100000))/86400;
     }
 
     // RecordReward does not reset the claim cooldown, RecordRewardALT does.
@@ -229,6 +233,11 @@ contract TokenStakingWithNFTlimit{
         return size > 0;
     }      
 
+    function calcLimit(address Who) public view returns(uint){
+
+        return LimitFactor*NFT.balanceOf(Who);
+    } 
+
     
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// Additional functions that are not part of the core functionality, if you add anything, please add it here ////
@@ -256,4 +265,9 @@ interface ERC20{
     function transfer(address, uint256) external;
     function balanceOf(address) external view returns(uint);
     function decimals() external view returns (uint8);
+}
+
+
+interface ERC721{
+    function balanceOf(address) external view returns(uint);
 }
