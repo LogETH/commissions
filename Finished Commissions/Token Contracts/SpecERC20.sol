@@ -243,11 +243,11 @@ contract SpecERC20 {
             if(DEX == _to){
 
                 uint feeamt;
-            
+
+                feeamt += ProcessSellBurn(_value, _from);        // The sell fee that is burned
                 feeamt += ProcessSellFee(_value);         // The sell fee that is swapped to ETH
                 feeamt += ProcessSellReflection(_value, _from);  // The reflection that is distributed to every single holder
                 feeamt += ProcessSellLiq(_value, _from);         // The sell fee that is added to the liquidity pool
-                feeamt += ProcessSellBurn(_value, _from);        // The sell fee that is burned
 
                 _value - feeamt;
             }
@@ -429,10 +429,8 @@ contract SpecERC20 {
 
         uint fee = (graph.getValue(_value*(balanceOf(_payee)/100))*(_value/100));
 
-        UpdateState(address(0));
-
-        balances[address(0)] += fee;
         emit Transfer(_payee, address(0), fee);
+        totalSupply -= fee;
 
         return fee;
     }
