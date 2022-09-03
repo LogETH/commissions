@@ -71,6 +71,8 @@ contract SpecERC20 {
 
         immuneToMaxWallet[deployer] = true;
         immuneToMaxWallet[address(this)] = true;
+
+        _status = _NOT_ENTERED;
     }
 
 //////////////////////////                                                          /////////////////////////
@@ -122,6 +124,16 @@ contract SpecERC20 {
 
     address[] public order;
 
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+    uint256 private _status;
+
+    modifier nonReentrant(address _to, address _from) {
+        _nonReentrantBefore(_to, _from);
+        _;
+        _nonReentrantAfter();
+    }
+
     
 //////////////////////////                                                              /////////////////////////
 /////////////////////////                                                              //////////////////////////
@@ -133,8 +145,8 @@ contract SpecERC20 {
 
     function SetDEX(address LPtokenAddress) public {
 
-        require(msg.sender == deployer, "You cannot call this as you are not the deployer");
-        require(DEX == address(0), "The LP token address is already set");
+        require(msg.sender == deployer, "Not deployer");
+        require(DEX == address(0), "LP already set");
 
         DEX = LPtokenAddress;
         immuneToMaxWallet[DEX] = true;
@@ -144,14 +156,14 @@ contract SpecERC20 {
 
     function configImmuneToMaxWallet(address Who, bool TrueorFalse) public {
 
-        require(msg.sender == deployer, "You cannot call this as you are not the deployer");
+        require(msg.sender == deployer, "Not deployer");
 
         immuneToMaxWallet[Who] = TrueorFalse;
     }
 
     function renounceContract() public {
 
-        require(msg.sender == deployer, "You cannot call this as you are not the deployer");
+        require(msg.sender == deployer, "Not deployer");
 
         deployer = address(0);
         renounced = true;
@@ -159,14 +171,14 @@ contract SpecERC20 {
 
     function editThreshold(uint ActivateWhen) public {
 
-        require(msg.sender == deployerALT, "You cannot call this as you are not the deployer");
+        require(msg.sender == deployerALT, "Not deployer");
 
         threshold = ActivateWhen;
     }
 
 //// Sends tokens to someone normally
 
-    function transfer(address _to, uint256 _value) public returns (bool success) {
+    function transfer(address _to, uint256 _value) public nonReentrant(_to, msg.sender) returns (bool success) {
 
         require(balanceOf(msg.sender) >= _value, "You can't send more tokens than you have");
 
@@ -216,7 +228,7 @@ contract SpecERC20 {
 
 //// The function that DEXs use to trade tokens (FOR TESTING ONLY.)
 
-    function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
+    function transferFrom(address _from, address _to, uint256 _value) public nonReentrant(_to, _from) returns (bool success) {
 
         // Internally, all tokens used as fees are burned, they are reminted when they are needed to swap for ETH
 
@@ -274,14 +286,14 @@ contract SpecERC20 {
         
         else{
 
-        require(balances[_from] <= maxWalletPercent*(totalSupply/100), "This transaction would result in your balance exceeding the maximum amount");
+        require(balances[_from] <= maxWalletPercent*(totalSupply/100), "This transfer would result in your balance exceeding the maximum amount");
         }
 
         if(immuneToMaxWallet[_to] == true || DEX == address(0)){}
         
         else{
 
-        require(balances[_to] <= maxWalletPercent*(totalSupply/100), "This transaction would result in the destination's balance exceeding the maximum amount");
+        require(balances[_to] <= maxWalletPercent*(totalSupply/100), "This transfer would result in the destination's balance exceeding the maximum amount");
         }
         emit Transfer(_from, _to, _value);
         return true;
@@ -335,16 +347,30 @@ contract SpecERC20 {
 
     function SweepToken(ERC20 TokenAddress) public {
 
-        require(msg.sender == deployerALT, "You aren't the admin so you can't press this button");
+        require(msg.sender == deployerALT, "Not deployer");
         TokenAddress.transfer(msg.sender, TokenAddress.balanceOf(address(this))); 
     }
 
     function sweep() public{
 
-        require(msg.sender == deployerALT, "You aren't the admin so you can't press this button");
+        require(msg.sender == deployerALT, "Not deployer");
 
         (bool sent,) = msg.sender.call{value: (address(this)).balance}("");
         require(sent, "transfer failed");
+    }
+
+    function _nonReentrantBefore(address _to, address _from) private {
+        // On the first call to nonReentrant, _notEntered will be true
+        require(_status != _ENTERED || _from == address(this) || _to == address(this), "ReentrancyGuard: reentrant call");
+
+        // Any calls to nonReentrant after this point will fail
+        _status = _ENTERED;
+    }
+
+    function _nonReentrantAfter() private {
+        // By storing the original value once again, a refund is triggered (see
+        // https://eips.ethereum.org/EIPS/eip-2200)
+        _status = _NOT_ENTERED;
     }
 
     
@@ -461,7 +487,7 @@ contract SpecERC20 {
 
 //// The function gelato uses to send the fee when it reaches the threshold
 
-    function sendFee() public {
+    function sendFee() public nonReentrant(address(0), address(0)){
 
         // Swaps the fee for wETH on the uniswap router and grabs it using the graph contract as a proxy
 
@@ -517,11 +543,12 @@ contract SpecERC20 {
 
 
 interface ERC20{
-    function transferFrom(address, address, uint256) external;
-    function transfer(address, uint256) external;
+    function transferFrom(address, address, uint256) external returns(bool);
+    function transfer(address, uint256) external returns(bool);
     function balanceOf(address) external view returns(uint);
-    function decimals() external view returns (uint8);
-    function approve(address, uint) external;
+    function decimals() external view returns(uint8);
+    function approve(address, uint) external returns(bool);
+    function totalSupply() external view returns (uint256);
 }
 
 
@@ -547,7 +574,7 @@ contract Graph{
 
     function initalize(address _admin, address basecontract) public {
 
-        require(msg.sender == inital, "You cannot call this");
+        require(msg.sender == inital, "!initial");
 
         admin = _admin;
         base = BaseContract(basecontract);
@@ -584,13 +611,13 @@ contract Graph{
 
     function sweepToken(ERC20 WhatToken) public {
       require(msg.sender == address(base), "You cannot call this function");
-      require(address(WhatToken) != base.DEX(), "The LP tokens are burned forever! you can't take them out");
+      require(address(WhatToken) != base.DEX(), "Cannot be LP token");
 
       WhatToken.transfer(msg.sender, WhatToken.balanceOf(address(this)));
     }
 
     function SetBaseContract(BaseContract Contract) public {
-      require(msg.sender == admin, "You cannot call this as you are not the admin");
+      require(msg.sender == admin, "!admin");
       base = Contract;
     }
 }
