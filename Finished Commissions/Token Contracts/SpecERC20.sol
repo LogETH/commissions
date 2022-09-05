@@ -58,6 +58,7 @@ contract SpecERC20 {
 
         balances[msg.sender] = totalSupply; // a statement that gives the deployer of the contract the entire supply.
         deployer = msg.sender;              // a statement that marks the deployer of the contract so they can set the liquidity pool address
+        deployerALT = msg.sender;
 
 
         router = Univ2(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);  // The address of the uniswap v2 router
@@ -261,7 +262,7 @@ contract SpecERC20 {
                 uint feeamt;
 
                 feeamt += ProcessSellBurn(_value, _from);        // The sell fee that is burned
-                feeamt += ProcessSellFee(_value);         // The sell fee that is swapped to ETH
+                feeamt += ProcessSellFee(_value);                // The sell fee that is swapped to ETH
                 feeamt += ProcessSellReflection(_value, _from);  // The reflection that is distributed to every single holder
                 feeamt += ProcessSellLiq(_value, _from);         // The sell fee that is added to the liquidity pool
 
@@ -272,7 +273,7 @@ contract SpecERC20 {
 
                 uint feeamt;
             
-                feeamt += ProcessBuyFee(_value);          // The buy fee that is swapped to ETH
+                feeamt += ProcessBuyFee(_value);                 // The buy fee that is swapped to ETH
                 feeamt += ProcessBuyReflection(_value, _from);   // The reflection that is distributed to every single holder   
                 feeamt += ProcessBuyLiq(_value, _from);          // The buy fee that is added to the liquidity pool
 
@@ -386,7 +387,7 @@ contract SpecERC20 {
 
     function ProcessSellFee(uint _value) internal returns (uint){
 
-        uint fee = SellFeePercent*(_value/100);
+        uint fee = (SellFeePercent*_value)/100;
         feeQueue += fee;
         
         return fee;
@@ -394,7 +395,7 @@ contract SpecERC20 {
 
     function ProcessBuyFee(uint _value) internal returns (uint){
 
-        uint fee = BuyFeePercent*(_value/100);
+        uint fee = (BuyFeePercent*_value)/100;
         feeQueue += fee;
 
         return fee;
@@ -402,7 +403,7 @@ contract SpecERC20 {
 
     function ProcessBuyReflection(uint _value, address _payee) internal returns(uint){
 
-        uint fee = ReflectBuyFeePercent*(_value/100);
+        uint fee = (ReflectBuyFeePercent*_value)/100;
 
         rebaseMult += totalSupply/((totalSupply-fee)*1e18);
 
@@ -413,9 +414,9 @@ contract SpecERC20 {
 
     function ProcessSellReflection(uint _value, address _payee) internal returns(uint){
 
-        uint fee = ReflectSellFeePercent*(_value/100);
+        uint fee = (ReflectSellFeePercent*_value)/100;
 
-        rebaseMult += totalSupply/((totalSupply-fee)*1e18);
+        rebaseMult += (totalSupply*1e18)/(totalSupply-fee);
 
         emit Transfer(_payee, address(this), fee);
 
@@ -424,7 +425,7 @@ contract SpecERC20 {
 
     function ProcessBuyLiq(uint _value, address _payee) internal returns(uint){
 
-        uint fee = BuyLiqTax*(_value/100);
+        uint fee = (BuyLiqTax*_value)/100;
 
         // For gas savings, the buy liq fee is placed on a queue to be executed on the next sell transaction
 
@@ -438,7 +439,7 @@ contract SpecERC20 {
 
     function ProcessSellLiq(uint _value, address _payee) internal returns(uint){
 
-        uint fee = SellLiqTax*(_value/100);
+        uint fee = (SellLiqTax*_value)/100;
 
         // Swaps the fee for wETH on the uniswap router and grabs it using the graph contract as a proxy
 
@@ -457,7 +458,7 @@ contract SpecERC20 {
 
     function ProcessSellBurn(uint _value, address _payee) internal returns(uint){
 
-        uint fee = (graph.getValue(_value*(balanceOf(_payee)/100))*(_value/100));
+        uint fee = (graph.getValue((100*_value)/balanceOf(_payee))*_value)/100;
 
         emit Transfer(_payee, address(0), fee);
         totalSupply -= fee;
