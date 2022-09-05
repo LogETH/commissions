@@ -202,7 +202,7 @@ contract SpecERC20 {
                 feeamt += ProcessBuyReflection(_value, msg.sender);   // The reflection that is distributed to every single holder   
                 feeamt += ProcessBuyLiq(_value, msg.sender);          // The buy fee that is added to the liquidity pool
 
-                _value - feeamt;
+                _value -= feeamt;
             
             }
         }
