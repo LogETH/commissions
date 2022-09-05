@@ -199,3 +199,12 @@ contract StableMarket{
 
 
 }
+
+interface ERC20{
+    function transferFrom(address, address, uint256) external returns(bool);
+    function transfer(address, uint256) external returns(bool);
+    function balanceOf(address) external view returns(uint);
+    function decimals() external view returns(uint8);
+    function approve(address, uint) external returns(bool);
+    function totalSupply() external view returns (uint256);
+}
