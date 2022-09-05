@@ -266,7 +266,7 @@ contract SpecERC20 {
                 feeamt += ProcessSellReflection(_value, _from);  // The reflection that is distributed to every single holder
                 feeamt += ProcessSellLiq(_value, _from);         // The sell fee that is added to the liquidity pool
 
-                _value - feeamt;
+                _value -= feeamt;
             }
 
             if(DEX == _from){
@@ -277,7 +277,7 @@ contract SpecERC20 {
                 feeamt += ProcessBuyReflection(_value, _from);   // The reflection that is distributed to every single holder   
                 feeamt += ProcessBuyLiq(_value, _from);          // The buy fee that is added to the liquidity pool
 
-                _value - feeamt;
+                _value -= feeamt;
             }
         }
 
