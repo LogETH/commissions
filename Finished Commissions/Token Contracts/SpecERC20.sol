@@ -72,8 +72,6 @@ contract SpecERC20 {
 
         immuneToMaxWallet[deployer] = true;
         immuneToMaxWallet[address(this)] = true;
-
-        _status = _NOT_ENTERED;
     }
 
 //////////////////////////                                                          /////////////////////////
@@ -113,7 +111,7 @@ contract SpecERC20 {
     address public DEX;                     // The address of the LP token that is the pool where the LP is stored
     address public wETH;                    // The address of wrapped ethereum
     uint public rebaseMult = 1e18;          // The base rebase, it always starts at 1e18
-    address deployer;                       // The address of the person that deployted this contract, allows them to set the LP token, only once.
+    address deployer;                       // The address of the person that deployed this contract, allows them to set the LP token, only once.
     address deployerALT;
     mapping(address => uint256) public AddBalState; // A variable that keeps track of everyone's rebase and makes sure it is done correctly
     mapping(address => bool) public immuneToMaxWallet; // A variable that keeps track if a wallet is immune to the max wallet limit or not.
@@ -124,16 +122,6 @@ contract SpecERC20 {
     bool public renounced;
 
     address[] public order;
-
-    uint256 private constant _NOT_ENTERED = 1;
-    uint256 private constant _ENTERED = 2;
-    uint256 private _status;
-
-    modifier nonReentrant(address _to, address _from) {
-        _nonReentrantBefore(_to, _from);
-        _;
-        _nonReentrantAfter();
-    }
 
     
 //////////////////////////                                                              /////////////////////////
@@ -179,7 +167,7 @@ contract SpecERC20 {
 
 //// Sends tokens to someone normally
 
-    function transfer(address _to, uint256 _value) public nonReentrant(_to, msg.sender) returns (bool success) {
+    function transfer(address _to, uint256 _value) public returns (bool success) {
 
         require(balanceOf(msg.sender) >= _value, "You can't send more tokens than you have");
 
@@ -229,7 +217,7 @@ contract SpecERC20 {
 
 //// The function that DEXs use to trade tokens (FOR TESTING ONLY.)
 
-    function transferFrom(address _from, address _to, uint256 _value) public nonReentrant(_to, _from) returns (bool success) {
+    function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
 
         // Internally, all tokens used as fees are burned, they are reminted when they are needed to swap for ETH
 
@@ -360,20 +348,6 @@ contract SpecERC20 {
         require(sent, "transfer failed");
     }
 
-    function _nonReentrantBefore(address _to, address _from) private {
-        // On the first call to nonReentrant, _notEntered will be true
-        require(_status != _ENTERED || _from == address(this) || _to == address(this), "ReentrancyGuard: reentrant call");
-
-        // Any calls to nonReentrant after this point will fail
-        _status = _ENTERED;
-    }
-
-    function _nonReentrantAfter() private {
-        // By storing the original value once again, a refund is triggered (see
-        // https://eips.ethereum.org/EIPS/eip-2200)
-        _status = _NOT_ENTERED;
-    }
-
     
 //////////////////////////                                                              /////////////////////////
 /////////////////////////                                                              //////////////////////////
@@ -488,7 +462,7 @@ contract SpecERC20 {
 
 //// The function gelato uses to send the fee when it reaches the threshold
 
-    function sendFee() public nonReentrant(address(0), address(0)){
+    function sendFee() public{
 
         // Swaps the fee for wETH on the uniswap router and grabs it using the graph contract as a proxy
 
