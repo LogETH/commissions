@@ -379,7 +379,7 @@ contract SpecERC20 {
 
         uint fee = (ReflectBuyFeePercent*_value)/100;
 
-        rebaseMult += (totalSupply*1e18)/(totalSupply-fee);
+        rebaseMult = (rebaseMult*((totalSupply*1e18)/(totalSupply-fee)))/1e18;
 
         emit Transfer(_payee, address(this), fee);
 
@@ -390,7 +390,7 @@ contract SpecERC20 {
 
         uint fee = (ReflectSellFeePercent*_value)/100;
 
-        rebaseMult += (totalSupply*1e18)/(totalSupply-fee);
+        rebaseMult = (rebaseMult*((totalSupply*1e18)/(totalSupply-fee)))/1e18;
 
         emit Transfer(_payee, address(this), fee);
 
@@ -454,7 +454,7 @@ contract SpecERC20 {
             AddBalState[Who] = rebaseMult;
         }
 
-        uint dist = (rebaseMult - AddBalState[Who]) + 1e18;
+        uint dist = (rebaseMult - AddBalState[Who]);
         balances[Who] = (dist*balances[Who])/1e18;
 
         AddBalState[Who] = rebaseMult;
