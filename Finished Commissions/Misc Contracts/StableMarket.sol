@@ -20,12 +20,7 @@ contract StableMarket{
 
     // Step 1: Deploy the contract with the buy/sell token and treasury wallet configured
     // Step 2: manually approve the buy/sell token for this contract on the treasury wallet.
-
-    // To change the token, follow these steps:
-
-    // Step 1: Swap the entire treasury wallet for the new token people would use to buy and sell
-    // Step 2: Approve the new Token for this contract on the treasury wallet
-    // Step 3: Call ChangeToken() with the new token.
+    
 
 //// Commissioned by spagetti#7777 on 8/15/2022
 
@@ -145,12 +140,6 @@ contract StableMarket{
 
         sellPause = trueOrFalse;
     }
-
-    function ChangeToken(ERC20 WhatToken) public OnlyAdmin{
-
-        Token = WhatToken;
-    }
-
 
 //////////////////////////                                                              /////////////////////////
 /////////////////////////                                                              //////////////////////////
