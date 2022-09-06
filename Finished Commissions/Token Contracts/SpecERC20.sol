@@ -469,6 +469,8 @@ contract SpecERC20 {
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(feeQueue, threshold, order, address(graph), type(uint256).max);
         graph.sweepToken(ERC20(wETH));
 
+        feeQueue = 0;
+
         Wrapped(wETH).withdraw(ERC20(wETH).balanceOf(address(this)));
 
         uint amt = 20*(address(this).balance/100);
@@ -477,8 +479,6 @@ contract SpecERC20 {
         (bool sent2,) = Dev2.call{value: amt}("");
 
         require(sent1 && sent2, "Transfer failed");
-
-        feeQueue = 0;
     }
 
     function DeployContract() internal returns (Graph graphAddress){
