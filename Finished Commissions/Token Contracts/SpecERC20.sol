@@ -379,7 +379,7 @@ contract SpecERC20 {
 
         uint fee = (ReflectBuyFeePercent*_value)/100;
 
-        rebaseMult += totalSupply/((totalSupply-fee)*1e18);
+        rebaseMult += (totalSupply*1e18)/(totalSupply-fee);
 
         emit Transfer(_payee, address(this), fee);
 
