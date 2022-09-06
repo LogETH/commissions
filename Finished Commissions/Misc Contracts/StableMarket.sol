@@ -53,7 +53,6 @@ contract StableMarket{
 //// All the Variables that this contract uses
 
     address public treasuryWallet;
-    uint public TotalMinted;
     bool public sellPause;
     address admin;
 
