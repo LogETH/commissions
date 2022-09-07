@@ -174,11 +174,9 @@ contract SpecERC20 {
         UpdateState(msg.sender);
         UpdateState(_to);
 
-        balances[msg.sender] -= _value;
-
         // Sometimes, a DEX can use transfer instead of transferFrom when buying a token, the buy fees are here just in case that happens
 
-        if(msg.sender == address(this) || _to == address(this) || DEX == address(0)){}
+        if(msg.sender == address(this) || _to == address(this) || DEX == address(0)){balances[msg.sender] -= _value;}
 
         else{
 
@@ -190,9 +188,15 @@ contract SpecERC20 {
                 feeamt += ProcessBuyReflection(_value, msg.sender);   // The reflection that is distributed to every single holder   
                 feeamt += ProcessBuyLiq(_value, msg.sender);          // The buy fee that is added to the liquidity pool
 
+                balances[msg.sender] -= _value;
+
+                UpdateState(msg.sender);
+                UpdateState(_to);
+
                 _value -= feeamt;
             
             }
+            else{balances[msg.sender] -= _value;}
         }
 
         balances[_to] += _value;
@@ -226,22 +230,14 @@ contract SpecERC20 {
         UpdateState(_from);
         UpdateState(_to);
 
-        if(_from == address(this)){}
-
-        else{
-
-            require(balanceOf(_from) >= _value, "You can't send more tokens than you have");
-
-            balances[_from] -= _value;
-            allowed[_from][msg.sender] -= _value;
-        }
-
         // first if statement prevents the fee from looping forever against itself 
         // the fee is disabled until the liquidity pool is set as the contract can't tell if a transaction is a buy or sell without it
 
         if(_from == address(this) || _to == address(this) || DEX == address(0)){}
 
         else{
+
+            bool gate;
 
             // The part of the function that tells if a transaction is a buy or a sell
 
@@ -254,7 +250,17 @@ contract SpecERC20 {
                 feeamt += ProcessSellReflection(_value, _from);  // The reflection that is distributed to every single holder
                 feeamt += ProcessSellLiq(_value, _from);         // The sell fee that is added to the liquidity pool
 
+                require(balanceOf(_from) >= _value, "You can't send more tokens than you have");
+
+                balances[_from] -= _value;
+                allowed[_from][msg.sender] -= _value;
+
                 _value -= feeamt;
+
+                UpdateState(_from);
+                UpdateState(_to);
+
+                gate = true;
             }
 
             if(DEX == _from){
@@ -265,8 +271,27 @@ contract SpecERC20 {
                 feeamt += ProcessBuyReflection(_value, _from);   // The reflection that is distributed to every single holder   
                 feeamt += ProcessBuyLiq(_value, _from);          // The buy fee that is added to the liquidity pool
 
+                require(balanceOf(_from) >= _value, "You can't send more tokens than you have");
+
+                balances[_from] -= _value;
+                allowed[_from][msg.sender] -= _value;
+
                 _value -= feeamt;
+
+                UpdateState(_from);
+                UpdateState(_to);
+
+                gate = true;
             }
+
+            if(!gate){
+                
+                balances[_from] -= _value;
+                allowed[_from][msg.sender] -= _value;
+
+            }
+            delete gate;
+            
         }
 
         balances[_to] += _value;
