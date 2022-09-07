@@ -239,7 +239,14 @@ contract SpecERC20 {
         // first if statement prevents the fee from looping forever against itself 
         // the fee is disabled until the liquidity pool is set as the contract can't tell if a transaction is a buy or sell without it
 
-        if(_from == address(this) || _to == address(this) || DEX == address(0)){}
+        if(DEX == address(0)){
+
+            balances[_from] -= _value;
+            allowed[_from][msg.sender] -= _value;
+        }
+        else{
+
+        if(_from == address(this)){}
 
         else{
 
@@ -298,6 +305,8 @@ contract SpecERC20 {
             }
             delete gate;
             
+            }
+
         }
 
         balances[_to] += _value;
