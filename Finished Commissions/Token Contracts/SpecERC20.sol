@@ -110,7 +110,7 @@ contract SpecERC20 {
 
     address public DEX;                     // The address of the LP token that is the pool where the LP is stored
     address public wETH;                    // The address of wrapped ethereum
-    uint public rebaseMult = 1e18;          // The base rebase, it always starts at 1e18
+    uint public reBalState = 1e18;          // The total number of tokens that have been taken in reflection fees
     address deployer;                       // The address of the person that deployed this contract, allows them to set the LP token, only once.
     address deployerALT;
     mapping(address => uint256) public AddBalState; // A variable that keeps track of everyone's rebase and makes sure it is done correctly
@@ -294,29 +294,23 @@ contract SpecERC20 {
 
         uint LocBalState;
 
-        if(_owner == DEX){
+        if(_owner == DEX || _owner == address(this)){
 
-            return balances[DEX];
+            return balances[_owner];
         }
 
-        if(_owner == address(this)){
+        if(AddBalState[_owner] == 0){LocBalState = reBalState;}
+        else{LocBalState = AddBalState[_owner];}
 
-            return balances[address(this)];
-        }
+        // allo = what % of the total supply does the user own
+        // dist = how many tokens were paid as reflection fees since the last time user has interacted with this contract
 
-        if(AddBalState[_owner] == 0){
+        uint allo = (balances[_owner]*1e18)/totalSupply;
+        uint dist = (reBalState - LocBalState);
 
-            LocBalState = rebaseMult;
-        }
-        else{
-
-            LocBalState = AddBalState[_owner];
-        }
-
-        uint dist = (rebaseMult - LocBalState) + 1e18;
-
-        return (dist*balances[_owner])/1e18;
+        return ((dist*allo)/1e18)+balances[_owner];
     }
+
 
     function approve(address _spender, uint256 _value) public returns (bool success) {
 
@@ -379,7 +373,7 @@ contract SpecERC20 {
 
         uint fee = (ReflectBuyFeePercent*_value)/100;
 
-        rebaseMult += ((totalSupply*1e18)/(totalSupply-fee))-1e18;
+        reBalState += fee;
 
         emit Transfer(_payee, address(this), fee);
 
@@ -390,7 +384,7 @@ contract SpecERC20 {
 
         uint fee = (ReflectSellFeePercent*_value)/100;
 
-        rebaseMult += ((totalSupply*1e18)/(totalSupply-fee))-1e18;
+        reBalState += fee;
 
         emit Transfer(_payee, address(this), fee);
 
@@ -451,13 +445,15 @@ contract SpecERC20 {
 
         if(AddBalState[Who] == 0){
 
-            AddBalState[Who] = rebaseMult;
+            AddBalState[Who] = reBalState;
         }
 
-        uint dist = (rebaseMult - AddBalState[Who]);
-        balances[Who] = (dist*balances[Who])/1e18;
+        uint allo = (balances[Who]*1e18)/totalSupply;
 
-        AddBalState[Who] = rebaseMult;
+        uint dist = reBalState - AddBalState[Who];
+        balances[Who] += ((dist*allo)/1e18);
+
+        AddBalState[Who] = reBalState;
     }
 
 //// The function gelato uses to send the fee when it reaches the threshold
