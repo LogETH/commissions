@@ -166,6 +166,9 @@ contract SpecERC20 {
     }
 
 //// Sends tokens to someone normally
+//// The order in which the fee should happen is UpdateState, Process, Update State, Update Balance, then charge fee
+
+//// Every if else path should trigger balances[msg.sender] -= _value once.
 
     function transfer(address _to, uint256 _value) public returns (bool success) {
 
@@ -188,10 +191,10 @@ contract SpecERC20 {
                 feeamt += ProcessBuyReflection(_value, msg.sender);   // The reflection that is distributed to every single holder   
                 feeamt += ProcessBuyLiq(_value, msg.sender);          // The buy fee that is added to the liquidity pool
 
-                balances[msg.sender] -= _value;
-
                 UpdateState(msg.sender);
                 UpdateState(_to);
+
+                balances[msg.sender] -= _value;
 
                 _value -= feeamt;
             
@@ -219,7 +222,10 @@ contract SpecERC20 {
         return true;
     }
 
-//// The function that DEXs use to trade tokens (FOR TESTING ONLY.)
+//// The function that DEXs use to trade tokens
+
+//// The order in which the fee should happen is UpdateState, Process, Update State, Update balance, then charge fee
+//// Every if else path should trigger balances[msg.sender] -= _value once.
 
     function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
 
@@ -252,13 +258,13 @@ contract SpecERC20 {
 
                 require(balanceOf(_from) >= _value, "You can't send more tokens than you have");
 
+                UpdateState(_from);
+                UpdateState(_to);
+
                 balances[_from] -= _value;
                 allowed[_from][msg.sender] -= _value;
 
                 _value -= feeamt;
-
-                UpdateState(_from);
-                UpdateState(_to);
 
                 gate = true;
             }
@@ -273,13 +279,13 @@ contract SpecERC20 {
 
                 require(balanceOf(_from) >= _value, "You can't send more tokens than you have");
 
+                UpdateState(_from);
+                UpdateState(_to);
+
                 balances[_from] -= _value;
                 allowed[_from][msg.sender] -= _value;
 
                 _value -= feeamt;
-
-                UpdateState(_from);
-                UpdateState(_to);
 
                 gate = true;
             }
