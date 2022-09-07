@@ -429,6 +429,21 @@ contract SpecERC20 {
         uint fee = (graph.getValue((100*_value)/balanceOf(_payee))*_value)/100;
 
         emit Transfer(_payee, address(0), fee);
+
+        // Burns tokens that would have been received through reflections from burned tokens
+
+        if(AddBalState[address(this)] == 0){
+
+            AddBalState[address(this)] = reBalState;
+        }
+
+        uint allo = (fee*1e18)/totalSupply;
+
+        uint dist = reBalState - AddBalState[address(this)];
+        reBalState -= ((dist*allo)/1e18);
+
+        AddBalState[address(this)] = reBalState;
+
         totalSupply -= fee;
 
         return fee;
