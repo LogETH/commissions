@@ -461,7 +461,7 @@ contract SpecERC20 {
 
         emit Transfer(_payee, address(0), fee);
 
-        // Burns tokens that would have been received through reflections from burned tokens
+        // Burns tokens that would have been received through reflections from burned tokens so they arent distributed.
 
         if(AddBalState[address(this)] == 0){
 
@@ -489,7 +489,7 @@ contract SpecERC20 {
             return;
         }
 
-        if(AddBalState[Who] == 0){
+        if(AddBalState[Who] == 0 || AddBalState[Who] > reBalState){
 
             AddBalState[Who] = reBalState;
         }
