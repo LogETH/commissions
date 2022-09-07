@@ -166,7 +166,7 @@ contract SpecERC20 {
     }
 
 //// Sends tokens to someone normally
-//// The order in which the fee should happen is UpdateState, Process, Update State, Update Balance, then charge fee
+//// The order in which the fee should happen is UpdateState, Process Fees, UpdateState, Update Balance, Charge Fee
 
 //// Every if else path should trigger balances[msg.sender] -= _value once.
 
@@ -224,8 +224,8 @@ contract SpecERC20 {
 
 //// The function that DEXs use to trade tokens
 
-//// The order in which the fee should happen is UpdateState, Process, Update State, Update balance, then charge fee
-//// Every if else path should trigger balances[msg.sender] -= _value once.
+//// The order in which the fee should happen is UpdateState, Process Fees, UpdateState, Update Balance, Charge Fee
+//// Every if else path should trigger balances[msg.sender] -= _value once, except when taking tokens from address(this)'s balance
 
     function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
 
