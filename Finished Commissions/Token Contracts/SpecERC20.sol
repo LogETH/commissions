@@ -234,7 +234,7 @@ contract SpecERC20 {
         UpdateState(_from);
         UpdateState(_to);
 
-        // first if statement prevents the fee from looping forever against itself 
+        // Second if statement prevents the fee from looping forever against itself 
         // the fee is disabled until the liquidity pool is set as the contract can't tell if a transaction is a buy or sell without it
 
         if(DEX == address(0)){
@@ -244,9 +244,11 @@ contract SpecERC20 {
         }
         else{
 
-        if(_from == address(this)){}
+            // if taking tokens from this address, do nothing, else charge the fee if the user is trading.
 
-        else{
+            if(_from == address(this)){}
+
+            else{
 
             bool gate;
 
