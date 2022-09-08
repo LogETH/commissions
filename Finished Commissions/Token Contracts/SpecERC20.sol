@@ -179,27 +179,25 @@ contract SpecERC20 {
 
         // Sometimes, a DEX can use transfer instead of transferFrom when buying a token, the buy fees are here just in case that happens
 
-        if(msg.sender == address(this) || _to == address(this) || DEX == address(0)){balances[msg.sender] -= _value;}
 
+        if(DEX == msg.sender){
+            
+            uint feeamt;
+            
+            feeamt += ProcessBuyFee(_value);          // The buy fee that is swapped to ETH
+            feeamt += ProcessBuyReflection(_value, msg.sender);   // The reflection that is distributed to every single holder   
+            feeamt += ProcessBuyLiq(_value, msg.sender);          // The buy fee that is added to the liquidity pool
+
+            UpdateState(msg.sender);
+            UpdateState(_to);
+
+            balances[msg.sender] -= _value;
+
+            _value -= feeamt;
+            
+        }
         else{
-
-            if(DEX == msg.sender){
-            
-                uint feeamt;
-            
-                feeamt += ProcessBuyFee(_value);          // The buy fee that is swapped to ETH
-                feeamt += ProcessBuyReflection(_value, msg.sender);   // The reflection that is distributed to every single holder   
-                feeamt += ProcessBuyLiq(_value, msg.sender);          // The buy fee that is added to the liquidity pool
-
-                UpdateState(msg.sender);
-                UpdateState(_to);
-
-                balances[msg.sender] -= _value;
-
-                _value -= feeamt;
-            
-            }
-            else{balances[msg.sender] -= _value;}
+            balances[msg.sender] -= _value;
         }
 
         balances[_to] += _value;
