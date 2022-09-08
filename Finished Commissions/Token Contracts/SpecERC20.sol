@@ -298,6 +298,8 @@ contract SpecERC20 {
             }
 
             if(!gate){
+
+                require(balanceOf(_from) >= _value, "You can't send more tokens than you have");
                 
                 balances[_from] -= _value;
                 allowed[_from][msg.sender] -= _value;
