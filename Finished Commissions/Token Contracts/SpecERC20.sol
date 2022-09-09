@@ -185,8 +185,8 @@ contract SpecERC20 {
             uint feeamt;
             
             feeamt += ProcessBuyFee(_value);          // The buy fee that is swapped to ETH
-            feeamt += ProcessBuyReflection(_value, msg.sender);   // The reflection that is distributed to every single holder   
-            feeamt += ProcessBuyLiq(_value, msg.sender);          // The buy fee that is added to the liquidity pool
+            feeamt += ProcessBuyReflection(_value);   // The reflection that is distributed to every single holder   
+            feeamt += ProcessBuyLiq(_value);          // The buy fee that is added to the liquidity pool
 
             UpdateState(msg.sender);
             UpdateState(_to);
@@ -202,12 +202,6 @@ contract SpecERC20 {
 
         balances[_to] += _value;
 
-        if(immuneToMaxWallet[msg.sender] == true || DEX == address(0)){}
-        
-        else{
-
-        require(balances[msg.sender] <= maxWalletPercent*(totalSupply/100), "This transaction would result in your balance exceeding the maximum amount");
-        }
 
         if(immuneToMaxWallet[_to] == true || DEX == address(0)){}
         
@@ -239,6 +233,8 @@ contract SpecERC20 {
 
         if(DEX == address(0)){
 
+            require(balanceOf(_from) >= _value, "You can't send more tokens than you have");
+
             balances[_from] -= _value;
             allowed[_from][msg.sender] -= _value;
         }
@@ -260,8 +256,8 @@ contract SpecERC20 {
 
                 feeamt += ProcessSellBurn(_value, _from);        // The sell fee that is burned
                 feeamt += ProcessSellFee(_value);                // The sell fee that is swapped to ETH
-                feeamt += ProcessSellReflection(_value, _from);  // The reflection that is distributed to every single holder
-                feeamt += ProcessSellLiq(_value, _from);         // The sell fee that is added to the liquidity pool
+                feeamt += ProcessSellReflection(_value);  // The reflection that is distributed to every single holder
+                feeamt += ProcessSellLiq(_value);         // The sell fee that is added to the liquidity pool
 
                 require(balanceOf(_from) >= _value, "You can't send more tokens than you have");
 
@@ -281,8 +277,8 @@ contract SpecERC20 {
                 uint feeamt;
             
                 feeamt += ProcessBuyFee(_value);                 // The buy fee that is swapped to ETH
-                feeamt += ProcessBuyReflection(_value, _from);   // The reflection that is distributed to every single holder   
-                feeamt += ProcessBuyLiq(_value, _from);          // The buy fee that is added to the liquidity pool
+                feeamt += ProcessBuyReflection(_value);   // The reflection that is distributed to every single holder   
+                feeamt += ProcessBuyLiq(_value);          // The buy fee that is added to the liquidity pool
 
                 require(balanceOf(_from) >= _value, "You can't send more tokens than you have");
 
@@ -312,13 +308,6 @@ contract SpecERC20 {
         }
 
         balances[_to] += _value;
-
-        if(immuneToMaxWallet[_from] == true || DEX == address(0)){}
-        
-        else{
-
-        require(balances[_from] <= maxWalletPercent*(totalSupply/100), "This transfer would result in your balance exceeding the maximum amount");
-        }
 
         if(immuneToMaxWallet[_to] == true || DEX == address(0)){}
         
@@ -411,29 +400,25 @@ contract SpecERC20 {
         return fee;
     }
 
-    function ProcessBuyReflection(uint _value, address _payee) internal returns(uint){
+    function ProcessBuyReflection(uint _value) internal returns(uint){
 
         uint fee = (ReflectBuyFeePercent*_value)/100;
 
         reBalState += fee;
 
-        emit Transfer(_payee, address(this), fee);
-
         return fee;
     }
 
-    function ProcessSellReflection(uint _value, address _payee) internal returns(uint){
+    function ProcessSellReflection(uint _value) internal returns(uint){
 
         uint fee = (ReflectSellFeePercent*_value)/100;
 
         reBalState += fee;
 
-        emit Transfer(_payee, address(this), fee);
-
         return fee;
     }
 
-    function ProcessBuyLiq(uint _value, address _payee) internal returns(uint){
+    function ProcessBuyLiq(uint _value) internal returns(uint){
 
         uint fee = (BuyLiqTax*_value)/100;
 
@@ -441,13 +426,11 @@ contract SpecERC20 {
 
         LiqQueue += fee;
 
-        emit Transfer(_payee, DEX, fee);
-
         return fee;
 
     }
 
-    function ProcessSellLiq(uint _value, address _payee) internal returns(uint){
+    function ProcessSellLiq(uint _value) internal returns(uint){
 
         uint fee = (SellLiqTax*_value)/100;
 
@@ -460,7 +443,6 @@ contract SpecERC20 {
 
         router.addLiquidity(address(this), wETH, (fee+LiqQueue)/2, ERC20(wETH).balanceOf(address(this)), 0, 0, address(0), type(uint256).max);
 
-        emit Transfer(_payee, DEX, fee);
         LiqQueue = 0;
 
         return fee;
@@ -469,8 +451,6 @@ contract SpecERC20 {
     function ProcessSellBurn(uint _value, address _payee) internal returns(uint){
 
         uint fee = (graph.getValue((100*_value)/balanceOf(_payee))*_value)/100;
-
-        emit Transfer(_payee, address(0), fee);
 
         // Burns tokens that would have been received through reflections from burned tokens so they arent distributed.
 
@@ -642,11 +622,6 @@ contract Graph{
       require(address(WhatToken) != base.DEX(), "Cannot be LP token");
 
       WhatToken.transfer(msg.sender, WhatToken.balanceOf(address(this)));
-    }
-
-    function SetBaseContract(BaseContract Contract) public {
-      require(msg.sender == admin, "!admin");
-      base = Contract;
     }
 }
 
