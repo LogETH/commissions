@@ -14,11 +14,8 @@ pragma solidity >=0.8.0 <0.9.0;
 
 //// What is this contract? 
 
-//// This contract is a specific custom ERC20 token, with a gas friendly reflection system I designed myself
+//// This contract is a specific custom ERC20 token, with a reflection system I designed myself
 //// Most of my contracts have an admin, this contract does not as it is automatically renounced when deployed
-
-//// Unlike traditional fee contracts, this contract broadcasts the fee and the sent amount in the transaction data.
-//// The broadcast is supported by ethereum explorers like etherscan and makes accounting much easier.
 
     // How to Setup:
 
@@ -166,8 +163,6 @@ contract SpecERC20 {
 //// Sends tokens to someone normally
 //// The order in which the fee should happen is UpdateState, Process Fees, UpdateState, Update Balance, Charge Fee
 
-//// Every if else path should trigger balances[msg.sender] -= _value once.
-
     function transfer(address _to, uint256 _value) public returns (bool success) {
 
         require(balanceOf(msg.sender) >= _value, "You can't send more tokens than you have");
@@ -177,26 +172,20 @@ contract SpecERC20 {
 
         // Sometimes, a DEX can use transfer instead of transferFrom when buying a token, the buy fees are here just in case that happens
 
+        uint feeamt;
 
         if(DEX == msg.sender){
-            
-            uint feeamt;
             
             feeamt += ProcessBuyFee(_value);          // The buy fee that is swapped to ETH
             feeamt += ProcessBuyReflection(_value);   // The reflection that is distributed to every single holder   
             feeamt += ProcessBuyLiq(_value);          // The buy fee that is added to the liquidity pool
 
             UpdateState(msg.sender);
-            UpdateState(_to);
-
-            balances[msg.sender] -= _value;
-
-            _value -= feeamt;
-            
+            UpdateState(_to);           
         }
-        else{
-            balances[msg.sender] -= _value;
-        }
+
+        balances[msg.sender] -= _value;
+        _value -= feeamt;
 
         balances[_to] += _value;
 
@@ -213,11 +202,8 @@ contract SpecERC20 {
 //// The function that DEXs use to trade tokens
 
 //// The order in which the fee should happen is UpdateState, Process Fees, UpdateState, Update Balance, Charge Fee
-//// Every if else path should trigger balances[msg.sender] -= _value once, except when taking tokens from address(this)'s balance
 
     function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
-
-        // Internally, all tokens used as fees are burned, they are reminted when they are needed to swap for ETH
 
         require(allowed[_from][msg.sender] >= _value && balanceOf(_from) >= _value, "insufficent approval or not enough tokens");
 
@@ -226,7 +212,7 @@ contract SpecERC20 {
 
         uint feeamt;
 
-        // Second if statement prevents the fee from looping forever against itself 
+        // first if statement prevents the fee from looping forever against itself 
         // the fee is disabled until the liquidity pool is set as the contract can't tell if a transaction is a buy or sell without it
 
         if(DEX != address(0) && _from != address(this)){
