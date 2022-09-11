@@ -104,8 +104,6 @@ contract SpecERC20 {
 
     address Dev1;                           // Already explained in the constructor, go look there
     address Dev2;                           // ^
-    address Dev3;                           // ^
-    address Dev4;                           // ^
     address Liq;                            // ^
 
     address public DEX;                     // The address of the LP token that is the pool where the LP is stored
@@ -221,89 +219,44 @@ contract SpecERC20 {
 
         // Internally, all tokens used as fees are burned, they are reminted when they are needed to swap for ETH
 
-        require(allowed[_from][msg.sender] >= _value, "insufficent approval");
+        require(allowed[_from][msg.sender] >= _value && balanceOf(_from) >= _value, "insufficent approval or not enough tokens");
 
         UpdateState(_from);
         UpdateState(_to);
 
+        uint feeamt;
+
         // Second if statement prevents the fee from looping forever against itself 
         // the fee is disabled until the liquidity pool is set as the contract can't tell if a transaction is a buy or sell without it
 
-        if(DEX == address(0)){
-
-            require(balanceOf(_from) >= _value, "You can't send more tokens than you have");
-
-            balances[_from] -= _value;
-            allowed[_from][msg.sender] -= _value;
-        }
-        else{
-
-            // if taking tokens from this address, do nothing, else charge the fee if the user is trading.
-
-            if(_from == address(this)){}
-
-            else{
-
-            bool gate;
+        if(DEX != address(0) && _from != address(this)){
 
             // The part of the function that tells if a transaction is a buy or a sell
 
             if(DEX == _to){
 
-                uint feeamt;
-
                 feeamt += ProcessSellBurn(_value, _from);        // The sell fee that is burned
                 feeamt += ProcessSellFee(_value);                // The sell fee that is swapped to ETH
                 feeamt += ProcessSellReflection(_value);  // The reflection that is distributed to every single holder
                 feeamt += ProcessSellLiq(_value);         // The sell fee that is added to the liquidity pool
-
-                require(balanceOf(_from) >= _value, "You can't send more tokens than you have");
-
-                UpdateState(_from);
-                UpdateState(_to);
-
-                balances[_from] -= _value;
-                allowed[_from][msg.sender] -= _value;
-
-                _value -= feeamt;
-
-                gate = true;
             }
 
             if(DEX == _from){
-
-                uint feeamt;
             
                 feeamt += ProcessBuyFee(_value);                 // The buy fee that is swapped to ETH
                 feeamt += ProcessBuyReflection(_value);   // The reflection that is distributed to every single holder   
                 feeamt += ProcessBuyLiq(_value);          // The buy fee that is added to the liquidity pool
-
-                require(balanceOf(_from) >= _value, "You can't send more tokens than you have");
-
-                UpdateState(_from);
-                UpdateState(_to);
-
-                balances[_from] -= _value;
-                allowed[_from][msg.sender] -= _value;
-
-                _value -= feeamt;
-
-                gate = true;
             }
-
-            if(!gate){
-
-                require(balanceOf(_from) >= _value, "You can't send more tokens than you have");
-                
-                balances[_from] -= _value;
-                allowed[_from][msg.sender] -= _value;
-
-            }
-            delete gate;
             
-            }
-
         }
+
+        UpdateState(_from);
+        UpdateState(_to);
+
+        balances[_from] -= _value;
+        allowed[_from][msg.sender] -= _value;
+
+        _value -= feeamt;
 
         balances[_to] += _value;
 
@@ -384,6 +337,8 @@ contract SpecERC20 {
 
         uint fee = (SellFeePercent*_value)/100;
         feeQueue += fee;
+
+        balances[address(this)] += fee;
         
         return fee;
     }
@@ -392,6 +347,8 @@ contract SpecERC20 {
 
         uint fee = (BuyFeePercent*_value)/100;
         feeQueue += fee;
+
+        balances[address(this)] += fee;
 
         return fee;
     }
@@ -421,6 +378,7 @@ contract SpecERC20 {
         // For gas savings, the buy liq fee is placed on a queue to be executed on the next sell transaction
 
         LiqQueue += fee;
+        balances[address(this)] += fee;
 
         return fee;
 
@@ -429,6 +387,7 @@ contract SpecERC20 {
     function ProcessSellLiq(uint _value) internal returns(uint){
 
         uint fee = (SellLiqTax*_value)/100;
+        balances[address(this)] += fee;
 
         // Swaps the fee for wETH on the uniswap router and grabs it using the graph contract as a proxy
 
