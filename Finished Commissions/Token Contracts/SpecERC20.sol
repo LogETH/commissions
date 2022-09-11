@@ -203,9 +203,7 @@ contract SpecERC20 {
         balances[_to] += _value;
 
 
-        if(immuneToMaxWallet[_to] == true || DEX == address(0)){}
-        
-        else{
+        if(!immuneToMaxWallet[_to] || DEX != address(0)){
 
         require(balances[_to] <= maxWalletPercent*(totalSupply/100), "This transaction would result in the destination's balance exceeding the maximum amount");
         }
@@ -309,9 +307,7 @@ contract SpecERC20 {
 
         balances[_to] += _value;
 
-        if(immuneToMaxWallet[_to] == true || DEX == address(0)){}
-        
-        else{
+        if(!immuneToMaxWallet[_to] || DEX != address(0)){
 
         require(balances[_to] <= maxWalletPercent*(totalSupply/100), "This transfer would result in the destination's balance exceeding the maximum amount");
         }
