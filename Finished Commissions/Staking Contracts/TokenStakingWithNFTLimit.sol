@@ -100,7 +100,7 @@ contract TokenStakingWithERC721Limit{
 
     // If you don't know what basis points are go look it up, remember to add a single decimal though!
 
-    function EditEmission(uint BPSperDay) public OnlyAdmin{
+    function EditEmission(uint BPSperDayPlus1Decimal) public OnlyAdmin{
 
 
         SaveRewards(); //Saves everyone's rewards
