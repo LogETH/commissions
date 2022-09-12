@@ -100,11 +100,11 @@ contract TokenStakingWithERC721Limit{
 
     // If you don't know what basis points are go look it up, remember to add a single decimal though!
 
-    function EditEmission(uint BPSperDayPlus1Decimal) public OnlyAdmin{
+    function EditEmission(uint BPSperDay) public OnlyAdmin{
 
 
         SaveRewards(); //Saves everyone's rewards
-        RewardFactor = BPSperDayPlus1Decimal; // Switches to the new reward percentage
+        RewardFactor = BPSperDay; // Switches to the new reward percentage
     }
 
     // Everyone asks what this does, it just sends stuck tokens to your address
@@ -181,7 +181,7 @@ contract TokenStakingWithERC721Limit{
 
     function CalculateRewards(address YourAddress, uint256 StakeTime) internal view returns (uint256){
 
-        return (StakeTime * RewardFactor * (TokensStaked[YourAddress]/100000))/86400;
+        return (StakeTime * RewardFactor * (TokensStaked[YourAddress]/10000))/86400;
     }
 
     // RecordReward does not reset the claim cooldown, RecordRewardALT does.
@@ -222,7 +222,7 @@ contract TokenStakingWithERC721Limit{
 
     function CalculateDailyReward(address YourAddress) public view returns(uint){
 
-        return RewardFactor * (TokensStaked[YourAddress]/100000);
+        return RewardFactor * (TokensStaked[YourAddress]/10000);
     }
 
     function CheckRewards(address YourAddress) public view returns (uint256){
