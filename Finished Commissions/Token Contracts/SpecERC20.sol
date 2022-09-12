@@ -208,6 +208,7 @@ contract SpecERC20 {
         if(_from != msg.sender){
 
             require(allowed[_from][msg.sender] >= _value, "insufficent approval");
+            allowed[_from][msg.sender] -= _value;
         }
 
         require(balanceOf(_from) >= _value, "Insufficient token balance.");
@@ -245,7 +246,6 @@ contract SpecERC20 {
         UpdateState(_to);
 
         balances[_from] -= _value;
-        allowed[_from][msg.sender] -= _value;
 
         _value -= feeamt;
 
