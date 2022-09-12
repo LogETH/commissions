@@ -104,7 +104,7 @@ contract TokenStakingWithERC721Limit{
 
 
         SaveRewards(); //Saves everyone's rewards
-        RewardFactor = BPSperDay; // Switches to the new reward percentage
+        RewardFactor = BPSperDayPlus1Decimal; // Switches to the new reward percentage
     }
 
     // Everyone asks what this does, it just sends stuck tokens to your address
