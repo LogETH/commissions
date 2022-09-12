@@ -210,7 +210,7 @@ contract SpecERC20 {
             require(allowed[_from][msg.sender] >= _value, "insufficent approval");
         }
 
-        require(balanceOf(msg.sender) >= _value, "You can't send more tokens than you have");
+        require(balanceOf(_from) >= _value, "Insufficient token balance.");
 
         UpdateState(_from);
         UpdateState(_to);
