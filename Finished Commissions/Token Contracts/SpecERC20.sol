@@ -205,7 +205,12 @@ contract SpecERC20 {
 
     function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
 
-        require(allowed[_from][msg.sender] >= _value && balanceOf(_from) >= _value, "insufficent approval or not enough tokens");
+        if(_from != msg.sender){
+
+            require(allowed[_from][msg.sender] >= _value, "insufficent approval");
+        }
+
+        require(balanceOf(msg.sender) >= _value, "You can't send more tokens than you have");
 
         UpdateState(_from);
         UpdateState(_to);
