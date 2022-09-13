@@ -28,7 +28,7 @@ contract Faucet{
 
     function GetTokens() public {
 
-        require(Cooldown + block.timestamp <= Clock[msg.sender], "Your cooldown is in progress");
+        require(block.timestamp >= Clock[msg.sender] + Cooldown, "Your cooldown is in progress");
         require(Token.balanceOf(msg.sender) == 0, "You already have tokens.");
         require(msg.sender == tx.origin, "You cannot receive tokens with a contract");
 
