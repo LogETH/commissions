@@ -17,7 +17,7 @@ pragma solidity >=0.7.0 <0.9.0;
 //// This contract is an  token that has several modules attached to it
 //// Modules in this contract: Traditional Fee, Fee Immunity, Blacklist.
 
-//// Made by me, fresh out of the oven
+//// Commissioned by ICΛRUS 𝐗𝐈𝐈𝐈#9110
 
 contract TokenWithFee {
 
