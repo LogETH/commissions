@@ -54,7 +54,6 @@ contract TokenWithFee {
     mapping(address => bool) public Blacklist;
     address public admin;
     address public TheCapitalGainsTaxWallet;
-    bool public paused;
 
     modifier onlyAdmin{
 
