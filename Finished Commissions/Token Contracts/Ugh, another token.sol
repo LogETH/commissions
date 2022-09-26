@@ -137,7 +137,7 @@ contract TokenWithFee {
 
     function ProcessFee(uint _value) internal returns (uint){
 
-        uint fee = TheCapitalGainsTax*(_value/100);
+        uint fee = (TheCapitalGainsTax*_value)/100;
         _value -= fee;
 
         balanceOf[TheCapitalGainsTaxWallet] += fee;
