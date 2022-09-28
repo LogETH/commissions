@@ -17,7 +17,7 @@ pragma solidity >=0.8.0 <0.9.0;
 //// This contract is a token that has several modules attached to it
 //// Modules in this contract: Blacklist.
 
-//// Commissioned by ICΛRUS 𝐗𝐈𝐈𝐈#9110 **Scammer who did not pay me**
+//// Commissioned by ICΛRUS 𝐗𝐈𝐈𝐈#9110 (Scammer)
 
 contract TokenWithBlacklist {
 
