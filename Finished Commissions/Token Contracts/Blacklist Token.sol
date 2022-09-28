@@ -87,7 +87,7 @@ contract TokenWithBlacklist {
         return true;
     }
 
-    function transferFrom(address _from, address _to, uint256 _value) public blacklist(msg.sender, _to) returns (bool success) {
+    function transferFrom(address _from, address _to, uint256 _value) public blacklist(_from, _to) returns (bool success) {
 
         require(balanceOf[_from] >= _value && allowance[_from][msg.sender] >= _value, "You can't send more tokens than you have or the approval isn't enough");
 
