@@ -15,7 +15,7 @@ pragma solidity >=0.8.0 <0.9.0;
 //// What is this contract? 
 
 //// This contract is a specific custom ERC20 token, with anti MEV features to trap mev bots
-//// Most of my contracts have an admin, this contract does not as it is automatically renounced when deployed
+//// Most of my contracts have an admin, this contract's admin is the deployer variable
 
     // How to Setup:
 
