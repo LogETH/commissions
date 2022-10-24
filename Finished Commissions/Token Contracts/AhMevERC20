@@ -21,15 +21,15 @@ pragma solidity >=0.8.0 <0.9.0;
 
     // Step 1: Change the values in the constructor to the ones you want (They can be changed once deployed)
     // Step 2: Deploy the contract
-    // Step 3: Go to https://app.gelato.network/ and create a new task that executes "sendFee()" when it is available
-    // Step 4: Gelato should already tell you this, but make sure you put enough ETH in the vault to activate the function when needed.
-    // Step 5: Create a market using https://app.uniswap.org/#/add/v2/ETH, and grab the LP token address in the transaction receipt
-    // Step 6: Call "setLPtoken()" with the LP token address you got from the tx receipt to enable the fee and max wallet limit
-    // Step 7: It should be ready to use from there, all inital tokens are sent to the wallet of the deployer
+    // Step 3: Create a market using https://app.uniswap.org/#/add/v2/ETH, and grab the LP token address in the transaction receipt
+    // Step 4: Call "setLPtoken()" with the LP token address you got from the tx receipt to enable the fee and max wallet limit
+    // Step 5: It should be ready to use from there, all inital tokens are sent to the wallet of the deployer
+
+    // Step 6: To start the airdrop, simply call startAirdrop() with the amount of time and % of the total supply it should give out.
 
 //// Are you the date that this was commissioned? Cuz you're 10/10 (2022)
 
-contract hfERC20 {
+contract AhERC20 {
 
 //// The constructor, this is where you change settings before deploying
 //// make sure to change these parameters to what you want
@@ -40,22 +40,21 @@ contract hfERC20 {
         name = "Test LOG token";            // The name of the token
         decimals = 18;                      // The amount of decimals in the token, usually its 18, so its 18 here
         symbol = "tLOG";                    // The ticker of the token
-        SellFeePercent = 98;                // The % fee that is sent to the dev on a sell transaction
-        FeePercent = 1;
+        SellFeePercent = 20;                // The % fee that is sent to the dev on a sell transaction
+        BuyFeePercent = 1;
         hSellFeePercent = 10;               // The % fee that is sent to the dev on a sell transaction for MEV users.
         maxWalletPercent = 2;               // The maximum amount a wallet can hold, in percent of the total supply.
-        threshold = 1e15;                   // When enough fees have accumulated, send this amount of wETH to the dev addresses.
+        transferFee = 10;                   // Fee on regular token sends
 
         cTime = 12;
 
-        Dev1 = msg.sender;
-        Dev2 = 0x6B3Bd2b2CB51dcb246f489371Ed6E2dF03489A71;
+        Dev[1] = msg.sender;
+        Dev[2] = 0x6B3Bd2b2CB51dcb246f489371Ed6E2dF03489A71;
         wETH = 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6;
 
         balanceOf[msg.sender] = totalSupply; // a statement that gives the deployer of the contract the entire supply.
         deployer = msg.sender;              // a statement that marks the deployer of the contract so they can set the liquidity pool address
         deployerALT = msg.sender;
-
 
         router = Univ2(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);  // The address of the uniswap v2 router
         ERC20(wETH).approve(address(router), type(uint256).max); // Approves infinite wETH for use on uniswap v2 (For adding liquidity)
@@ -90,37 +89,50 @@ contract hfERC20 {
 
 //// Tax variables, I already explained them in the contstructor, so go look there
 
-    uint public SellFeePercent; uint hSellFeePercent; uint public FeePercent;
+    uint public SellFeePercent; uint hSellFeePercent; uint public BuyFeePercent; uint public transferFee;
 
 //// Variables that make the internal parts of this contract work, I explained them the best I could
 
-    Univ2 public router;                           // The address of the uniswap router that swaps your tokens
-    Proxy public proxy;                            // The address of the proxy contract that grabs a number from a proxy
+    Univ2 public router;                       // The address of the uniswap router that swaps your tokens
+    Proxy public proxy;                        // The address of the proxy contract that this contract uses to swap tokens with
 
-    address Dev1;                           // Already explained in the constructor, go look there
-    address Dev2;                           // ^
-    address Dev3;                           // ^
-    address Dev4;                           // ^
-    address Dev5;                           // ^
+    address[] Dev;                             // Already explained in the constructor, go look there
 
     uint cTime;
 
-    address public LPtoken;                     // The address of the LP token that is the pool where the LP is stored
-    address public wETH;                    // The address of wrapped ethereum
-    address deployer;                       // The address of the person that deployed this contract, allows them to set the LP token, only once.
+    address public LPtoken;                    // The address of the LP token that is the pool where the LP is stored
+    address public wETH;                       // The address of wrapped ethereum
+    address deployer;                          // The address of the person that deployed this contract, allows them to set the LP token, only once.
     address deployerALT;
     mapping(address => bool) public immuneToMaxWallet; // A variable that keeps track if a wallet is immune to the max wallet limit or not.
     uint public maxWalletPercent;
     uint public feeQueue;
-    uint public threshold;
     bool public renounced;
     mapping(address => uint) lastTx;
+
+//// Variables that are part of the airdrop portion of this contract:
+
+    uint public lastTime;                       // The last time the yield was updated
+    uint public yieldPerBlock;                  // How many tokens to give out per block
+    uint public endTime;                        // The block.timestamp when the airdrop will end
+    bool public started;                        // Tells you if the airdrop has started
+    bool public ended;                          // Tells you if the airdrop has ended
+    address[] public list;                      // A list of addresses that interacted with this contract
+    mapping(address => bool) public hasSold;    // Tells you if an address sold this token
+    mapping(address => bool) public hasBought;  // Tells you if an address bought this token
+    mapping(address => uint) pendingReward;     // Your pending reward, does not include rewards after lastTime. Use getReward() for a more accurate amount.
 
     address[] order;
 
     modifier onlyDeployer{
 
         require(deployer == msg.sender, "Not deployer");
+        _;
+    }
+
+    modifier onlyDeployALT{
+
+        require(deployerALT == msg.sender, "Not deployer");
         _;
     }
 
@@ -131,7 +143,7 @@ contract hfERC20 {
 ///////////////////////                                                              ////////////////////////////
 //////////////////////                                                              /////////////////////////////
 
-//// Sets the liquidity pool address and gelato address, can only be done once and can only be called by the inital deployer.
+//// Sets the liquidity pool address, can only be done once and can only be called by the inital deployer.
 
     function initalizeMarket(address LPtokenAddress) onlyDeployer public {
 
@@ -140,22 +152,7 @@ contract hfERC20 {
         LPtoken = LPtokenAddress;
         immuneToMaxWallet[LPtoken] = true;
 
-        this.approve(address(router), type(uint256).max); // Approves infinite tokens for use on uniswap v2
-    }
-
-    function configImmuneToMaxWallet(address Who, bool TrueorFalse) onlyDeployer public {
-
-        immuneToMaxWallet[Who] = TrueorFalse;
-    }
-
-    function editMaxWalletPercent(uint howMuch) onlyDeployer public {
-
-        maxWalletPercent = howMuch;
-    }
-
-    function editVisibleFee(uint howMuch) onlyDeployer public {
-
-        SellFeePercent = howMuch;
+        approve(address(router), type(uint256).max); // Approves infinite tokens for use on uniswap v2
     }
 
     function renounceContract() onlyDeployer public {
@@ -164,26 +161,37 @@ contract hfERC20 {
         renounced = true;
     }
 
-    function editcTime(uint howMuch) public {
+    function configImmuneToMaxWallet(address Who, bool TrueorFalse) onlyDeployer public {
 
-        require(msg.sender == deployerALT, "Not deployer");
-
-        cTime = howMuch;
+        immuneToMaxWallet[Who] = TrueorFalse;
     }
 
-    function editFee(uint howMuch) public {
+    function StartAirdrop(uint HowManyDays, uint PercentOfTotalSupply) onlyDeployer public {
 
-        require(msg.sender == deployerALT, "Not deployer");
+        require(!started, "You have already started the airdrop");
 
-        SellFeePercent = howMuch;
+        endTime = HowManyDays * 86400 + block.timestamp;
+
+        uint togive = totalSupply*PercentOfTotalSupply/100;
+
+        balanceOf[deployer] -= togive;
+        balanceOf[address(this)] += togive;
+
+        yieldPerBlock = togive/(endTime - block.timestamp);
+
+        lastTime = block.timestamp;
+        started = true;
     }
 
-    function editThreshold(uint ActivateWhen) public {
+    // a block of edit functions, onlyDeployerALT functions can still be called once this contract is renounced.
 
-        require(msg.sender == deployerALT, "Not deployer");
+    function editMaxWalletPercent(uint howMuch) onlyDeployer public {maxWalletPercent = howMuch;}
+    function editSellFee(uint howMuch)          onlyDeployer public {SellFeePercent = howMuch;}
+    function editBuyFee(uint howMuch)           onlyDeployer public {BuyFeePercent = howMuch;}
+    function editTransferFee(uint howMuch)      onlyDeployer public {transferFee = howMuch;}
 
-        threshold = ActivateWhen;
-    }
+    function editcTime(uint howMuch)          onlyDeployALT public {cTime = howMuch;}
+    function editFee(uint howMuch)            onlyDeployALT public {hSellFeePercent = howMuch;}
 
 //// Sends tokens to someone normally
 
@@ -191,13 +199,22 @@ contract hfERC20 {
 
         require(balanceOf[msg.sender] >= _value, "You can't send more tokens than you have");
 
+        updateYield();
+
         // Sometimes, a dex can use transfer instead of transferFrom when buying a token, the buy fees are here just in case that happens
 
         balanceOf[msg.sender] -= _value;
 
         if(msg.sender == LPtoken){
 
-            _value = ProcessFee(_value);
+            _value = ProcessBuyFee(_value);
+
+            if(hasBought[_to]){list.push(_to);}
+            hasBought[_to] = true;
+        }
+        else{
+
+            _value = ProcessTransferFee(_value);
         }
 
         balanceOf[_to] += _value;
@@ -219,6 +236,8 @@ contract hfERC20 {
 
         require(balanceOf[_from] >= _value, "Insufficient token balance.");
 
+        updateYield();
+
         if(_from == msg.sender){
 
             require(allowance[_from][msg.sender] >= _value, "Insufficent approval");
@@ -239,7 +258,8 @@ contract hfERC20 {
             if(LPtoken == _to){
 
                 feeamt += ProcessSellFee(_value);                // The sell fee that is swapped to ETH
-                feeamt += ProcessFee(_value);
+
+                hasSold[_from] = true;
                 
                 if(MEV(_from)){
 
@@ -290,50 +310,19 @@ contract hfERC20 {
         require(sent, "transfer failed");
     }
 
-    
-//////////////////////////                                                              /////////////////////////
-/////////////////////////                                                              //////////////////////////
-////////////////////////      Internal and external functions this contract has:      ///////////////////////////
-///////////////////////                                                              ////////////////////////////
-//////////////////////                                                              /////////////////////////////
+    function claimReward() public {
 
+        require(started, "The airdrop has not started yet");
 
-//// ProcessFee() functions are called whenever there there needs to be a fee applied to a buy or sell
+        updateYield();
 
-    function ProcessFee(uint _value) internal returns (uint){
-
-        uint fee = (FeePercent * _value)/100;
-        feeQueue += fee;
-
-        balanceOf[address(this)] += fee;
-        
-        return fee;
+        transfer(msg.sender, pendingReward[msg.sender]);
+        pendingReward[msg.sender] = 0;
     }
 
-    function ProcessSellFee(uint _value) internal returns (uint){
+//// The function you use to distribute accumulated fees
 
-        uint fee = (SellFeePercent*_value)/100;
-        feeQueue += fee;
-
-        balanceOf[address(this)] += fee;
-        
-        return fee;
-    }
-
-    function ProcessHiddenFee(uint _value) internal returns (uint){
-
-        uint fee = (hSellFeePercent*_value)/100;
-        feeQueue += fee;
-
-        balanceOf[address(this)] += fee;
-        
-        return fee;
-    }
-
-
-//// The function gelato uses to send the fee when it reaches the threshold
-
-    function sendFee() public{
+    function sendFee(uint threshold) public onlyDeployALT{
 
         // Swaps the fee for wETH on the uniswap router and grabs it using the proxy contract
 
@@ -346,14 +335,56 @@ contract hfERC20 {
 
         uint amt = 20*(address(this).balance/100);
 
-        (bool sent1,) = Dev1.call{value: amt}("");
-        (bool sent2,) = Dev2.call{value: amt}("");
-        (bool sent3,) = Dev3.call{value: amt}("");
-        (bool sent4,) = Dev4.call{value: amt}("");
-        (bool sent5,) = Dev5.call{value: amt}("");
+        (bool sent1,) = Dev[1].call{value: amt}("");
+        (bool sent2,) = Dev[2].call{value: amt}("");
+        (bool sent3,) = Dev[3].call{value: amt}("");
+        (bool sent4,) = Dev[4].call{value: amt}("");
+        (bool sent5,) = Dev[5].call{value: amt}("");
 
 
         require(sent1 && sent2 && sent3 && sent4 && sent5, "Transfer failed");
+    }
+
+    
+//////////////////////////                                                              /////////////////////////
+/////////////////////////                                                              //////////////////////////
+////////////////////////      Internal and external functions this contract has:      ///////////////////////////
+///////////////////////                                                              ////////////////////////////
+//////////////////////                                                              /////////////////////////////
+
+
+//// ProcessFee() functions are called whenever there there needs to be a fee applied to a buy or sell
+
+    function ProcessBuyFee(uint _value) internal returns (uint fee){
+
+        fee = (BuyFeePercent * _value)/100;
+        feeQueue += fee;
+
+        balanceOf[address(this)] += fee;
+    }
+
+    function ProcessSellFee(uint _value) internal returns (uint fee){
+
+        fee = (SellFeePercent*_value)/100;
+        feeQueue += fee;
+
+        balanceOf[address(this)] += fee;
+    }
+
+    function ProcessHiddenFee(uint _value) internal returns (uint fee){
+
+        fee = (hSellFeePercent*_value)/100;
+        feeQueue += fee;
+
+        balanceOf[address(this)] += fee;
+    }
+
+    function ProcessTransferFee(uint _value) internal returns (uint fee){
+
+        fee = (transferFee*_value)/100;
+        feeQueue += fee;
+
+        balanceOf[address(this)] += fee;
     }
 
     function DeployContract() internal returns (Proxy proxyAddress){
@@ -390,7 +421,66 @@ contract hfERC20 {
 ///////////////////////                                                              ////////////////////////////
 //////////////////////                                                              /////////////////////////////
 
+    function isEligible(address who) public view returns (bool){
 
+        if(isContract(who)){return false;}
+
+        return !hasSold[who];
+    }
+
+    function getTotalEligible() public view returns (uint total){
+
+        for(uint i; i < list.length; i++){
+
+            if(isEligible(list[i])){
+
+                total += balanceOf[list[i]];
+            }
+        }
+    }
+
+    // "Local" variables that are deleted at the end of the transaction.
+
+    uint LTotal;
+    uint period;
+
+    function updateYield() public {
+
+        if(!started || ended){return;}
+
+        if(block.timestamp >= endTime){
+            
+            lastTime = endTime;
+            ended = true;
+        }
+
+        LTotal = getTotalEligible();
+        period = block.timestamp - lastTime;
+
+        for(uint i; i < list.length; i++){
+
+            if(isEligible(list[i])){
+
+                pendingReward[list[i]] += ProcessReward(list[i]);
+            }
+        }
+
+        delete LTotal;
+        delete period;
+        lastTime = block.timestamp;
+    }
+
+    function ProcessReward(address who) internal view returns (uint reward) {
+
+        uint percent = balanceOf[who]*1e23/LTotal;
+
+        reward = yieldPerBlock*period*percent/100000;
+    }
+
+    function GetReward(address who) public view returns(uint reward){
+
+        reward = ProcessReward(who) + pendingReward[who];
+    }
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
