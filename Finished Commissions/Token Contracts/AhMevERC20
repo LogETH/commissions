@@ -481,9 +481,18 @@ contract AhERC20 {
         reward = yieldPerBlock*period*percent/100000;
     }
 
+    function ProcessRewardALT(address who) internal view returns (uint reward) {
+
+        uint percent = balanceOf[who]*1e23/getTotalEligible();
+
+        reward = yieldPerBlock*(block.timestamp - lastTime)*percent/100000;
+    }
+
     function GetReward(address who) public view returns(uint reward){
 
-        reward = ProcessReward(who) + pendingReward[who];
+        if(lastTime == 0){return 0;}
+
+        reward = ProcessRewardALT(who) + pendingReward[who];
     }
 
 
