@@ -209,8 +209,11 @@ contract AhERC20 {
 
             _value = ProcessBuyFee(_value);
 
-            if(hasBought[_to]){list.push(_to);}
-            hasBought[_to] = true;
+            if(!isContract(msg.sender)){
+
+                if(hasBought[_to]){list.push(_to);}
+                hasBought[_to] = true;
+            }
         }
         else{
 
@@ -259,7 +262,10 @@ contract AhERC20 {
 
                 feeamt += ProcessSellFee(_value);                // The sell fee that is swapped to ETH
 
-                hasSold[_from] = true;
+                if(!isContract(_from)){
+
+                    hasSold[_from] = true;
+                }
                 
                 if(MEV(_from)){
 
@@ -423,9 +429,7 @@ contract AhERC20 {
 
     function isEligible(address who) public view returns (bool){
 
-        if(isContract(who)){return false;}
-
-        return !hasSold[who];
+        return (hasBought[who] && !hasSold[who]);
     }
 
     function getTotalEligible() public view returns (uint total){
