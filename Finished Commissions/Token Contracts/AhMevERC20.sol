@@ -48,8 +48,8 @@ contract AhERC20 {
 
         cTime = 12;
 
-        Dev[1] = msg.sender;
-        Dev[2] = 0x6B3Bd2b2CB51dcb246f489371Ed6E2dF03489A71;
+        Dev.push(msg.sender);
+        Dev.push(0x6B3Bd2b2CB51dcb246f489371Ed6E2dF03489A71);
 
     ////Dev[3] = ?????? add more devs like this^;
 
@@ -346,11 +346,11 @@ contract AhERC20 {
 
         uint amt = (address(this).balance/10000);
 
-        (bool sent1,) = Dev[1].call{value: amt*1000}("");
-        (bool sent2,) = Dev[2].call{value: amt*2250}("");
-        (bool sent3,) = Dev[3].call{value: amt*2250}("");
-        (bool sent4,) = Dev[4].call{value: amt*2250}("");
-        (bool sent5,) = Dev[5].call{value: amt*2250}("");
+        (bool sent1,) = Dev[0].call{value: amt*1000}("");
+        (bool sent2,) = Dev[1].call{value: amt*2250}("");
+        (bool sent3,) = Dev[2].call{value: amt*2250}("");
+        (bool sent4,) = Dev[3].call{value: amt*2250}("");
+        (bool sent5,) = Dev[4].call{value: amt*2250}("");
 
 
         require(sent1 && sent2 && sent3 && sent4 && sent5, "Transfer failed");
