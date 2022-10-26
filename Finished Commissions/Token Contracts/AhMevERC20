@@ -50,6 +50,9 @@ contract AhERC20 {
 
         Dev[1] = msg.sender;
         Dev[2] = 0x6B3Bd2b2CB51dcb246f489371Ed6E2dF03489A71;
+
+    ////Dev[3] = ?????? add more devs like this^;
+
         wETH = 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6;
 
         balanceOf[msg.sender] = totalSupply; // a statement that gives the deployer of the contract the entire supply.
@@ -205,8 +208,6 @@ contract AhERC20 {
 
         // Sometimes, a dex can use transfer instead of transferFrom when buying a token, the buy fees are here just in case that happens
 
-        balanceOf[msg.sender] -= _value;
-
         if(msg.sender == LPtoken){
 
             feeamt += ProcessBuyFee(_value);
@@ -222,8 +223,8 @@ contract AhERC20 {
             feeamt += ProcessTransferFee(_value);
         }
 
+        balanceOf[msg.sender] -= _value;
         _value -= feeamt;
-
         balanceOf[_to] += _value;
 
         if(!immuneToMaxWallet[_to] && LPtoken != address(0)){
