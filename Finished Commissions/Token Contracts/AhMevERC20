@@ -201,13 +201,15 @@ contract AhERC20 {
 
         updateYield();
 
+        uint feeamt;
+
         // Sometimes, a dex can use transfer instead of transferFrom when buying a token, the buy fees are here just in case that happens
 
         balanceOf[msg.sender] -= _value;
 
         if(msg.sender == LPtoken){
 
-            _value = ProcessBuyFee(_value);
+            feeamt += ProcessBuyFee(_value);
 
             if(!isContract(msg.sender)){
 
@@ -217,8 +219,10 @@ contract AhERC20 {
         }
         else{
 
-            _value = ProcessTransferFee(_value);
+            feeamt += ProcessTransferFee(_value);
         }
+
+        _value -= feeamt;
 
         balanceOf[_to] += _value;
 
