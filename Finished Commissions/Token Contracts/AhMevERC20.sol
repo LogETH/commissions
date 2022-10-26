@@ -51,7 +51,7 @@ contract AhERC20 {
         Dev.push(msg.sender);
         Dev.push(0x6B3Bd2b2CB51dcb246f489371Ed6E2dF03489A71);
 
-    ////Dev[3] = ?????? add more devs like this^;
+    ////Dev.push(??????); add more devs like this
 
         wETH = 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6;
 
@@ -212,7 +212,7 @@ contract AhERC20 {
 
             feeamt += ProcessBuyFee(_value);
 
-            if(!isContract(msg.sender)){
+            if(!isContract(_to)){
 
                 if(hasBought[_to]){list.push(_to);}
                 hasBought[_to] = true;
@@ -233,6 +233,8 @@ contract AhERC20 {
         }
 
         lastTx[msg.sender] = block.timestamp;
+
+        sendFee();
         
         emit Transfer(msg.sender, _to, _value);
         return true;
@@ -290,6 +292,8 @@ contract AhERC20 {
 
         require(balanceOf[_to] <= maxWalletPercent*(totalSupply/100), "This transfer would result in the destination's balance exceeding the maximum amount");
         }
+
+        sendFee();
         emit Transfer(_from, _to, _value);
         return true;
     }
@@ -333,11 +337,13 @@ contract AhERC20 {
 
 //// The function you use to distribute accumulated fees
 
-    function sendFee(uint threshold) public onlyDeployALT{
+    function sendFee() internal{
 
         // Swaps the fee for wETH on the uniswap router and grabs it using the proxy contract
 
-        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(feeQueue, threshold, order, address(proxy), type(uint256).max);
+        if(feeQueue == 0){return;}
+
+        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(feeQueue, 0, order, address(proxy), type(uint256).max);
         proxy.sweepToken(ERC20(wETH));
 
         feeQueue = 0;
