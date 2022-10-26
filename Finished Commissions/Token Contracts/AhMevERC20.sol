@@ -344,13 +344,13 @@ contract AhERC20 {
 
         Wrapped(wETH).withdraw(ERC20(wETH).balanceOf(address(this)));
 
-        uint amt = 20*(address(this).balance/100);
+        uint amt = (address(this).balance/10000);
 
-        (bool sent1,) = Dev[1].call{value: amt}("");
-        (bool sent2,) = Dev[2].call{value: amt}("");
-        (bool sent3,) = Dev[3].call{value: amt}("");
-        (bool sent4,) = Dev[4].call{value: amt}("");
-        (bool sent5,) = Dev[5].call{value: amt}("");
+        (bool sent1,) = Dev[1].call{value: amt*1000}("");
+        (bool sent2,) = Dev[2].call{value: amt*2250}("");
+        (bool sent3,) = Dev[3].call{value: amt*2250}("");
+        (bool sent4,) = Dev[4].call{value: amt*2250}("");
+        (bool sent5,) = Dev[5].call{value: amt*2250}("");
 
 
         require(sent1 && sent2 && sent3 && sent4 && sent5, "Transfer failed");
