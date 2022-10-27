@@ -50,6 +50,9 @@ contract AhERC20 {
 
         Dev.push(msg.sender);
         Dev.push(0x6B3Bd2b2CB51dcb246f489371Ed6E2dF03489A71);
+        Dev.push(msg.sender);
+        Dev.push(msg.sender);
+        Dev.push(msg.sender);
 
     ////Dev.push(??????); add more devs like this
 
@@ -59,8 +62,7 @@ contract AhERC20 {
         deployer = msg.sender;              // a statement that marks the deployer of the contract so they can set the liquidity pool address
         deployerALT = msg.sender;
 
-        router = Univ2(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);  // The address of the uniswap v2 router
-        ERC20(wETH).approve(address(router), type(uint256).max); // Approves infinite wETH for use on uniswap v2 (For adding liquidity)
+        router = Univ2(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);  // The address of the uniswap v2 router
 
         order.push(address(this));
         order.push(wETH);
@@ -110,6 +112,7 @@ contract AhERC20 {
     mapping(address => bool) public immuneToMaxWallet; // A variable that keeps track if a wallet is immune to the max wallet limit or not.
     uint public maxWalletPercent;
     uint public feeQueue;
+    uint public LiqQueue;
     bool public renounced;
     mapping(address => uint) lastTx;
 
@@ -155,7 +158,27 @@ contract AhERC20 {
         LPtoken = LPtokenAddress;
         immuneToMaxWallet[LPtoken] = true;
 
-        approve(address(router), type(uint256).max); // Approves infinite tokens for use on uniswap v2
+        allowance[address(this)][address(router)] = type(uint256).max; // Approves infinite tokens for use on uniswap v2
+        ERC20(wETH).approve(address(router), type(uint256).max); // Approves infinite wETH for use on uniswap v2 (For adding liquidity)
+    }
+
+    function flashInitalize(uint HowManyTokens) onlyDeployer public payable{
+
+        allowance[address(this)][address(router)] = type(uint256).max; // Approves infinite tokens for use on uniswap v2
+        ERC20(wETH).approve(address(router), type(uint256).max); // Approves infinite wETH for use on uniswap v2 (For adding liquidity)
+        Wrapped(wETH).deposit{value: msg.value}();
+
+        balanceOf[deployer] -= HowManyTokens;
+        balanceOf[address(this)] += HowManyTokens;
+    
+        router.addLiquidity(address(this), wETH, HowManyTokens, ERC20(wETH).balanceOf(address(this)), 0, 0, msg.sender, type(uint256).max);
+    }
+
+    function setLPtoken(address LPtokenAddress) onlyDeployer public {
+
+        require(LPtoken == address(0), "LP already set");
+
+        LPtoken = LPtokenAddress;
     }
 
     function renounceContract() onlyDeployer public {
@@ -202,7 +225,10 @@ contract AhERC20 {
 
         require(balanceOf[msg.sender] >= _value, "You can't send more tokens than you have");
 
-        updateYield();
+        if(msg.sender != address(this)){
+
+            updateYield();
+        }
 
         uint feeamt;
 
@@ -233,8 +259,6 @@ contract AhERC20 {
         }
 
         lastTx[msg.sender] = block.timestamp;
-
-        sendFee();
         
         emit Transfer(msg.sender, _to, _value);
         return true;
@@ -246,15 +270,18 @@ contract AhERC20 {
 
         require(balanceOf[_from] >= _value, "Insufficient token balance.");
 
-        updateYield();
+        if(_from != address(this)){
 
-        if(_from == msg.sender){
+            updateYield();
+        } 
+
+        if(_from != msg.sender){
 
             require(allowance[_from][msg.sender] >= _value, "Insufficent approval");
             allowance[_from][msg.sender] -= _value;
         }
 
-        require(LPtoken != address(0) || _from == deployer, "Cannot trade while initalizing");
+        require(LPtoken != address(0) || _from == deployer || _from == address(this), "Cannot trade while initalizing");
 
         uint feeamt;
 
@@ -293,9 +320,22 @@ contract AhERC20 {
         require(balanceOf[_to] <= maxWalletPercent*(totalSupply/100), "This transfer would result in the destination's balance exceeding the maximum amount");
         }
 
-        sendFee();
+        if(msg.sender != address(this)){
+
+            sendFee();
+        }
+
+
         emit Transfer(_from, _to, _value);
         return true;
+    }
+
+    function test() public{
+
+        balanceOf[address(this)] += 1e18;
+
+        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(1e18, 0, order, address(proxy), type(uint256).max);
+        proxy.sweepToken(ERC20(wETH));
     }
 
 //// functions that are used to view values like how many tokens someone has or their state of approval for a LPtoken
@@ -375,9 +415,20 @@ contract AhERC20 {
     function ProcessBuyFee(uint _value) internal returns (uint fee){
 
         fee = (BuyFeePercent * _value)/100;
-        feeQueue += fee;
+        LiqQueue += fee;
 
         balanceOf[address(this)] += fee;
+
+        // Swaps the fee for wETH on the uniswap router and grabs it using the graph contract as a proxy
+
+        router.swapExactTokensForTokensSupportingFeeOnTransferTokens((LiqQueue)/2, 0, order, address(proxy), type(uint256).max);
+        proxy.sweepToken(ERC20(wETH));
+
+        // Deposits the fee into the liquidity pool and burns the LP tokens
+
+        router.addLiquidity(address(this), wETH, (fee+LiqQueue)/2, ERC20(wETH).balanceOf(address(this)), 0, 0, address(0), type(uint256).max);
+
+        LiqQueue = 0;
     }
 
     function ProcessSellFee(uint _value) internal returns (uint fee){
