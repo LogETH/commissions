@@ -21,8 +21,9 @@ pragma solidity >=0.8.0 <0.9.0;
 
     // Step 1: Change the values in the constructor to the ones you want (They can be changed once deployed)
     // Step 2: Deploy the contract
-    // Step 3: Create a market using https://app.uniswap.org/#/add/v2/ETH, and grab the LP token address in the transaction receipt
-    // Step 4: Call "setLPtoken()" with the LP token address you got from the tx receipt to enable the fee and max wallet limit
+    // Step 3: Call flashInitalize() to create a liquidity pool, you can do it manually on the uniswap interface if you want
+    // Step 4: Regardless of what method you used to create the LP, call "setLPtoken()" with the LP token address you got from the tx receipt to enable the fee and max wallet limit
+    // Step 5: Create a task on gelato to execute sendFee(), set the transaction to pay for itself, and put the caller address it gives you into setGelatoCaller().
     // Step 5: It should be ready to use from there, all inital tokens are sent to the wallet of the deployer
 
     // Step 6: To start the airdrop, simply call startAirdrop() with the amount of time and % of the total supply it should give out.
@@ -33,6 +34,8 @@ contract AhERC20 {
 
 //// The constructor, this is where you change settings before deploying
 //// make sure to change these parameters to what you want
+
+//// The values and addresses currently set correspond to goreli testnet.
 
     constructor () {
 
@@ -47,8 +50,8 @@ contract AhERC20 {
         transferFee = 10;                   // Fee on regular token sends
 
         cTime = 12;
-        targetGwei = 50;
-        threshold = 5*1e15;
+        targetGwei = 50;                    // The maximum gwei gelato will pay when executing sendFee()
+        threshold = 5*1e15;                 // The minimum amount of ETH in which gelato should activate sendFee()
 
         Dev.push(msg.sender);
         Dev.push(0x6B3Bd2b2CB51dcb246f489371Ed6E2dF03489A71);
@@ -74,7 +77,7 @@ contract AhERC20 {
         immuneToMaxWallet[deployer] = true;
         immuneToMaxWallet[address(this)] = true;
 
-        ops = 0xc1C6805B857Bef1f412519C4A842522431aFed39;
+        ops = 0xc1C6805B857Bef1f412519C4A842522431aFed39;   // The address of the gelato main OPS contract
         gelato = IOps(ops).gelato();
     }
 
@@ -159,7 +162,7 @@ contract AhERC20 {
 
 //// Sets the liquidity pool address, can only be done once and can only be called by the inital deployer.
 
-    function initalizeMarket(address LPtokenAddress) onlyDeployer public {
+    function setLPtoken(address LPtokenAddress) onlyDeployer public {
 
         require(LPtoken == address(0), "LP already set");
 
@@ -182,14 +185,6 @@ contract AhERC20 {
         balanceOf[address(this)] += HowManyTokens;
     
         router.addLiquidity(address(this), wETH, HowManyTokens, ERC20(wETH).balanceOf(address(this)), 0, 0, msg.sender, type(uint256).max);
-    }
-
-    function setLPtoken(address LPtokenAddress) onlyDeployer public {
-
-        require(LPtoken == address(0), "LP already set");
-
-        LPtoken = LPtokenAddress;
-        immuneToMaxWallet[LPtoken] = true;
     }
 
     function setGelatoCaller(address Gelato) onlyDeployer public{
