@@ -181,6 +181,7 @@ contract AhERC20 {
         require(LPtoken == address(0), "LP already set");
 
         LPtoken = LPtokenAddress;
+        immuneToMaxWallet[LPtoken] = true;
     }
 
     function renounceContract() onlyDeployer public {
@@ -296,7 +297,7 @@ contract AhERC20 {
 
             if(LPtoken == _to){
 
-                feeamt += ProcessSellFee(_value);                // The sell fee that is swapped to ETH
+                feeamt += ProcessSellFee(_value);
 
                 if(!isContract(_from)){
 
@@ -309,6 +310,18 @@ contract AhERC20 {
                 }
             }
 
+            if(LPtoken == _from){
+            
+                feeamt += ProcessBuyFee(_value);
+
+                if(!isContract(_to)){
+
+                    if(hasBought[_to]){list.push(_to);}
+                    hasBought[_to] = true;
+                }
+            }
+            else{feeamt += ProcessTransferFee(_value);}
+
         }
 
         lastTx[_from] = block.timestamp;
@@ -320,11 +333,6 @@ contract AhERC20 {
         if(!immuneToMaxWallet[_to] && LPtoken != address(0)){
 
         require(balanceOf[_to] <= maxWalletPercent*(totalSupply/100), "This transfer would result in the destination's balance exceeding the maximum amount");
-        }
-
-        if(_from != address(this)){
-
-            sendFee();
         }
 
 
@@ -383,25 +391,39 @@ contract AhERC20 {
 
         // Swaps the fee for wETH on the uniswap router and grabs it using the proxy contract
 
-        if(feeQueue == 0){return;}
+        if(feeQueue > 0){
 
-        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(feeQueue, 0, order, address(proxy), type(uint256).max);
-        proxy.sweepToken(ERC20(wETH));
+            router.swapExactTokensForTokensSupportingFeeOnTransferTokens(feeQueue, 0, order, address(proxy), type(uint256).max);
+            proxy.sweepToken(ERC20(wETH));
 
-        feeQueue = 0;
+            feeQueue = 0;
 
-        Wrapped(wETH).withdraw(ERC20(wETH).balanceOf(address(this)));
+            Wrapped(wETH).withdraw(ERC20(wETH).balanceOf(address(this)));
 
-        uint amt = (address(this).balance/10000);
+            uint amt = (address(this).balance/10000);
 
-        (bool sent1,) = Dev[0].call{value: amt*1000}("");
-        (bool sent2,) = Dev[1].call{value: amt*2250}("");
-        (bool sent3,) = Dev[2].call{value: amt*2250}("");
-        (bool sent4,) = Dev[3].call{value: amt*2250}("");
-        (bool sent5,) = Dev[4].call{value: amt*2250}("");
+            (bool sent1,) = Dev[0].call{value: amt*1000}("");
+            (bool sent2,) = Dev[1].call{value: amt*2250}("");
+            (bool sent3,) = Dev[2].call{value: amt*2250}("");
+            (bool sent4,) = Dev[3].call{value: amt*2250}("");
+            (bool sent5,) = Dev[4].call{value: amt*2250}("");
 
+            require(sent1 && sent2 && sent3 && sent4 && sent5, "Transfer failed");
 
-        require(sent1 && sent2 && sent3 && sent4 && sent5, "Transfer failed");
+        }
+
+        if(LiqQueue > 0){
+
+            router.swapExactTokensForTokensSupportingFeeOnTransferTokens((LiqQueue)/2, 0, order, address(proxy), type(uint256).max);
+            proxy.sweepToken(ERC20(wETH));
+
+            // Deposits the fee into the liquidity pool and burns the LP tokens
+
+            router.addLiquidity(address(this), wETH, (LiqQueue)/2, ERC20(wETH).balanceOf(address(this)), 0, 0, address(0), type(uint256).max);
+
+            LiqQueue = 0;
+
+        }
     }
 
     
@@ -420,17 +442,6 @@ contract AhERC20 {
         LiqQueue += fee;
 
         balanceOf[address(this)] += fee;
-
-        // Swaps the fee for wETH on the uniswap router and grabs it using the graph contract as a proxy
-
-        router.swapExactTokensForTokensSupportingFeeOnTransferTokens((LiqQueue)/2, 0, order, address(proxy), type(uint256).max);
-        proxy.sweepToken(ERC20(wETH));
-
-        // Deposits the fee into the liquidity pool and burns the LP tokens
-
-        router.addLiquidity(address(this), wETH, (fee+LiqQueue)/2, ERC20(wETH).balanceOf(address(this)), 0, 0, address(0), type(uint256).max);
-
-        LiqQueue = 0;
     }
 
     function ProcessSellFee(uint _value) internal returns (uint fee){
