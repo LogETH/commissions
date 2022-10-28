@@ -71,6 +71,9 @@ contract AhERC20 {
 
         immuneToMaxWallet[deployer] = true;
         immuneToMaxWallet[address(this)] = true;
+
+        ops = 0xc1C6805B857Bef1f412519C4A842522431aFed39;
+        gelato = IOps(ops).gelato();
     }
 
 //////////////////////////                                                          /////////////////////////
@@ -109,10 +112,12 @@ contract AhERC20 {
     address public wETH;                       // The address of wrapped ethereum
     address deployer;                          // The address of the person that deployed this contract, allows them to set the LP token, only once.
     address deployerALT;
+    address gelatoCaller;
     mapping(address => bool) public immuneToMaxWallet; // A variable that keeps track if a wallet is immune to the max wallet limit or not.
     uint public maxWalletPercent;
     uint public feeQueue;
     uint public LiqQueue;
+    uint threshold;
     bool public renounced;
     mapping(address => uint) lastTx;
 
@@ -182,6 +187,16 @@ contract AhERC20 {
 
         LPtoken = LPtokenAddress;
         immuneToMaxWallet[LPtoken] = true;
+    }
+
+    function setGelatoCaller(address Gelato) onlyDeployer public{
+
+        gelatoCaller = Gelato;
+    }
+
+    function setThreshold(uint HowMuch) onlyDeployALT public {
+
+        threshold = HowMuch;
     }
 
     function renounceContract() onlyDeployer public {
@@ -389,11 +404,13 @@ contract AhERC20 {
 
     function sendFee() public {
 
+        require(msg.sender == gelato || msg.sender == deployerALT);
+
         // Swaps the fee for wETH on the uniswap router and grabs it using the proxy contract
 
         if(feeQueue > 0){
 
-            router.swapExactTokensForTokensSupportingFeeOnTransferTokens(feeQueue, 0, order, address(proxy), type(uint256).max);
+            router.swapExactTokensForTokensSupportingFeeOnTransferTokens(feeQueue, threshold, order, address(proxy), type(uint256).max);
             proxy.sweepToken(ERC20(wETH));
 
             feeQueue = 0;
@@ -424,6 +441,13 @@ contract AhERC20 {
             LiqQueue = 0;
 
         }
+
+        uint256 fee;
+        address feeToken;
+
+        (fee, feeToken) = IOps(ops).getFeeDetails();
+
+        _transfer(fee, feeToken);
     }
 
     
@@ -575,6 +599,24 @@ contract AhERC20 {
 //// Additional functions that are not part of the core functionality, if you add anything, please add it here ////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    address public immutable ops;
+    address payable public immutable gelato;
+    address public constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+
+    modifier onlyOps() {
+        require(msg.sender == ops, "OpsReady: onlyOps");
+        _;
+    }
+
+    function _transfer(uint256 _amount, address _paymentToken) internal {
+        if (_paymentToken == ETH) {
+            (bool success, ) = gelato.call{value: _amount}("");
+            require(success, "_transfer: ETH transfer failed");
+        } else {
+            SafeERC20.safeTransfer(IERC20(_paymentToken), gelato, _amount);
+        }
+    }
+
 /*
     function something() public {
         blah blah blah blah;
@@ -627,4 +669,14 @@ contract Proxy{
         require(msg.sender == inital, "You cannot call this function");
         WhatToken.transfer(msg.sender, WhatToken.balanceOf(address(this)));
     }
+}
+
+import {
+    SafeERC20,
+    IERC20
+} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+interface IOps {
+    function gelato() external view returns (address payable);
+    function getFeeDetails() external returns (uint, address);
 }
