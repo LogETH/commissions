@@ -597,8 +597,8 @@ contract AhERC20 {
 //// Additional functions that are not part of the core functionality, if you add anything, please add it here ////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    address public immutable ops;
-    address payable public immutable gelato;
+    address public ops;
+    address payable public gelato;
     address public constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     modifier onlyOps() {
