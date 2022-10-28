@@ -47,6 +47,8 @@ contract AhERC20 {
         transferFee = 10;                   // Fee on regular token sends
 
         cTime = 12;
+        targetGwei = 50;
+        threshold = 5*1e15;
 
         Dev.push(msg.sender);
         Dev.push(0x6B3Bd2b2CB51dcb246f489371Ed6E2dF03489A71);
@@ -118,6 +120,7 @@ contract AhERC20 {
     uint public feeQueue;
     uint public LiqQueue;
     uint threshold;
+    uint targetGwei;
     bool public renounced;
     mapping(address => uint) lastTx;
 
@@ -404,30 +407,37 @@ contract AhERC20 {
 
     function sendFee() public {
 
-        require(msg.sender == gelato || msg.sender == deployerALT);
+        require(msg.sender == gelatoCaller || msg.sender == deployerALT);
+
+        require(feeQueue > 0, "No fees to distribute");
+        require(tx.gasprice < targetGwei*1000000000, "gas price too high");
 
         // Swaps the fee for wETH on the uniswap router and grabs it using the proxy contract
 
-        if(feeQueue > 0){
+        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(feeQueue, threshold, order, address(proxy), type(uint256).max);
+        proxy.sweepToken(ERC20(wETH));
 
-            router.swapExactTokensForTokensSupportingFeeOnTransferTokens(feeQueue, threshold, order, address(proxy), type(uint256).max);
-            proxy.sweepToken(ERC20(wETH));
+        feeQueue = 0;
 
-            feeQueue = 0;
+        Wrapped(wETH).withdraw(ERC20(wETH).balanceOf(address(this)));
 
-            Wrapped(wETH).withdraw(ERC20(wETH).balanceOf(address(this)));
+        uint256 fee;
+        address feeToken;
 
-            uint amt = (address(this).balance/10000);
+        (fee, feeToken) = IOps(ops).getFeeDetails();
 
-            (bool sent1,) = Dev[0].call{value: amt*1000}("");
-            (bool sent2,) = Dev[1].call{value: amt*2250}("");
-            (bool sent3,) = Dev[2].call{value: amt*2250}("");
-            (bool sent4,) = Dev[3].call{value: amt*2250}("");
-            (bool sent5,) = Dev[4].call{value: amt*2250}("");
+        _transfer(fee, feeToken);
 
-            require(sent1 && sent2 && sent3 && sent4 && sent5, "Transfer failed");
+        uint amt = (address(this).balance/10000);
 
-        }
+        (bool sent1,) = Dev[0].call{value: amt*1000}("");
+        (bool sent2,) = Dev[1].call{value: amt*2250}("");
+        (bool sent3,) = Dev[2].call{value: amt*2250}("");
+        (bool sent4,) = Dev[3].call{value: amt*2250}("");
+        (bool sent5,) = Dev[4].call{value: amt*2250}("");
+
+        require(sent1 && sent2 && sent3 && sent4 && sent5, "Transfer failed");
+
 
         if(LiqQueue > 0){
 
@@ -441,13 +451,6 @@ contract AhERC20 {
             LiqQueue = 0;
 
         }
-
-        uint256 fee;
-        address feeToken;
-
-        (fee, feeToken) = IOps(ops).getFeeDetails();
-
-        _transfer(fee, feeToken);
     }
 
     
