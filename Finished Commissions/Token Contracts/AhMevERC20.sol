@@ -164,6 +164,8 @@ contract AhERC20 {
 
     function flashInitalize(uint HowManyTokens) onlyDeployer public payable{
 
+        HowManyTokens *= 1e18;
+
         allowance[address(this)][address(router)] = type(uint256).max; // Approves infinite tokens for use on uniswap v2
         ERC20(wETH).approve(address(router), type(uint256).max); // Approves infinite wETH for use on uniswap v2 (For adding liquidity)
         Wrapped(wETH).deposit{value: msg.value}();
@@ -320,7 +322,7 @@ contract AhERC20 {
         require(balanceOf[_to] <= maxWalletPercent*(totalSupply/100), "This transfer would result in the destination's balance exceeding the maximum amount");
         }
 
-        if(msg.sender != address(this)){
+        if(_from != address(this)){
 
             sendFee();
         }
@@ -377,7 +379,7 @@ contract AhERC20 {
 
 //// The function you use to distribute accumulated fees
 
-    function sendFee() internal{
+    function sendFee() public {
 
         // Swaps the fee for wETH on the uniswap router and grabs it using the proxy contract
 
