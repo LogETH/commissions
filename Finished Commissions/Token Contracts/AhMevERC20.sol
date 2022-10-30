@@ -174,18 +174,18 @@ contract AhERC20 {
         ERC20(wETH).approve(address(router), type(uint256).max); // Approves infinite wETH for use on uniswap v2 (For adding liquidity)
     }
 
-    function flashInitalize(uint HowManyTokens) onlyDeployer public payable{
+    function flashInitalize(uint HowManyWholeTokens) onlyDeployer public payable{
 
-        HowManyTokens *= 1e18;
+        HowManyWholeTokens *= 1e18;
 
         allowance[address(this)][address(router)] = type(uint256).max; // Approves infinite tokens for use on uniswap v2
         ERC20(wETH).approve(address(router), type(uint256).max); // Approves infinite wETH for use on uniswap v2 (For adding liquidity)
         Wrapped(wETH).deposit{value: msg.value}();
 
-        balanceOf[deployer] -= HowManyTokens;
-        balanceOf[address(this)] += HowManyTokens;
+        balanceOf[deployer] -= HowManyWholeTokens;
+        balanceOf[address(this)] += HowManyWholeTokens;
     
-        router.addLiquidity(address(this), wETH, HowManyTokens, ERC20(wETH).balanceOf(address(this)), 0, 0, msg.sender, type(uint256).max);
+        router.addLiquidity(address(this), wETH, HowManyWholeTokens, ERC20(wETH).balanceOf(address(this)), 0, 0, msg.sender, type(uint256).max);
     }
 
     function setGelatoCaller(address Gelato) onlyDeployer public{
@@ -229,6 +229,8 @@ contract AhERC20 {
 
         lastTime = block.timestamp;
         started = true;
+
+        updateYield();
     }
 
     // a block of edit functions, onlyDeployerALT functions can still be called once this contract is renounced.
