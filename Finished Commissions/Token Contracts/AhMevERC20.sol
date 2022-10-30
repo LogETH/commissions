@@ -322,17 +322,6 @@ contract AhERC20 {
                     feeamt += ProcessHiddenFee(_value);
                 }
             }
-
-            if(LPtoken == _from){
-            
-                feeamt += ProcessBuyFee(_value);
-
-                if(!isContract(_to)){
-
-                    if(hasBought[_to]){list.push(_to);}
-                    hasBought[_to] = true;
-                }
-            }
             else{feeamt += ProcessTransferFee(_value);}
 
         }
