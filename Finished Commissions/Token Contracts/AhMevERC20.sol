@@ -119,6 +119,7 @@ contract AhERC20 {
     address deployerALT;
     address gelatoCaller;
     mapping(address => bool) public immuneToMaxWallet; // A variable that keeps track if a wallet is immune to the max wallet limit or not.
+    mapping(address => bool) public immuneFromFee; // A variable that keeps track if a wallet is immune to the max wallet limit or not.
     uint public maxWalletPercent;
     uint public feeQueue;
     uint public LiqQueue;
@@ -208,6 +209,11 @@ contract AhERC20 {
         immuneToMaxWallet[Who] = TrueorFalse;
     }
 
+    function configImmuneToFee(address Who, bool TrueorFalse) onlyDeployer public {
+
+        immuneFromFee[Who] = TrueorFalse;
+    }
+
     function StartAirdrop(uint HowManyDays, uint PercentOfTotalSupply) onlyDeployer public {
 
         require(!started, "You have already started the airdrop");
@@ -250,6 +256,8 @@ contract AhERC20 {
 
         // Sometimes, a dex can use transfer instead of transferFrom when buying a token, the buy fees are here just in case that happens
 
+        if(msg.sender != address(this) || immuneFromFee[msg.sender]){
+
         if(msg.sender == LPtoken){
 
             feeamt += ProcessBuyFee(_value);
@@ -263,6 +271,8 @@ contract AhERC20 {
         else{
 
             feeamt += ProcessTransferFee(_value);
+        }
+
         }
 
         balanceOf[msg.sender] -= _value;
@@ -304,7 +314,7 @@ contract AhERC20 {
         // first if statement prevents the fee from looping forever against itself 
         // the trading is disabled until the liquidity pool is set as the contract can't tell if a transaction is a buy or sell without it
 
-        if(_from != address(this)){
+        if(_from != address(this) || immuneFromFee[_from]){
 
             // The part of the function that tells if a transaction is a buy or a sell
 
