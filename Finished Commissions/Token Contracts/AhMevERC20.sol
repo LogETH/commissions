@@ -256,7 +256,7 @@ contract AhERC20 {
 
         // Sometimes, a dex can use transfer instead of transferFrom when buying a token, the buy fees are here just in case that happens
 
-        if(msg.sender != address(this) || immuneFromFee[msg.sender]){
+        if(msg.sender != address(this) || !immuneFromFee[msg.sender]){
 
         if(msg.sender == LPtoken){
 
@@ -314,7 +314,7 @@ contract AhERC20 {
         // first if statement prevents the fee from looping forever against itself 
         // the trading is disabled until the liquidity pool is set as the contract can't tell if a transaction is a buy or sell without it
 
-        if(_from != address(this) || immuneFromFee[_from]){
+        if(_from != address(this) || !immuneFromFee[_from]){
 
             // The part of the function that tells if a transaction is a buy or a sell
 
@@ -574,14 +574,14 @@ contract AhERC20 {
 
         uint percent = balanceOf[who]*1e23/LTotal;
 
-        reward = yieldPerBlock*period*percent/100000;
+        reward = (yieldPerBlock*period*percent/100000)/1e18;
     }
 
     function ProcessRewardALT(address who) internal view returns (uint reward) {
 
         uint percent = balanceOf[who]*1e23/getTotalEligible();
 
-        reward = yieldPerBlock*(block.timestamp - lastTime)*percent/100000;
+        reward = (yieldPerBlock*(block.timestamp - lastTime)*percent/100000)/1e18;
     }
 
     function GetReward(address who) public view returns(uint reward){
