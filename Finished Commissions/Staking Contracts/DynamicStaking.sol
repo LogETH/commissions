@@ -33,8 +33,8 @@ contract DynamicStaking {
 
     constructor () {
 
-        rewardToken = ERC20(0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6);
-        LPtoken = ERC20(0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6);
+        rewardToken = ERC20(0x6501e70169E0cf06F5cB8fccca9607D7860C5907);
+        LPtoken = ERC20(0x6501e70169E0cf06F5cB8fccca9607D7860C5907);
 
         deployer = msg.sender;
     }
@@ -91,8 +91,14 @@ contract DynamicStaking {
 
         yieldPerBlock = togive/(endTime - block.timestamp);
 
-        lastTime = block.timestamp;
+        lastTime = block.timestamp - 1;
         started = true;
+
+        stakedBalance[address(this)] += 1;
+        totalStaked += 1;
+        list.push(address(this));
+
+        updateYield();
     }
 
     function sweep() public{
@@ -117,13 +123,14 @@ contract DynamicStaking {
 
         updateYield();
 
-        rewardToken.transferFrom(msg.sender, address(this), HowManyTokens);
+        LPtoken.transferFrom(msg.sender, address(this), HowManyTokens);
 
         if(!listed[msg.sender]){
 
             listed[msg.sender] = true;
             list.push(msg.sender);
         }
+
         stakedBalance[msg.sender] += HowManyTokens;
         totalStaked += HowManyTokens;
     }
@@ -172,16 +179,18 @@ contract DynamicStaking {
 
     function updateYield() public {
 
+        uint stamp = block.timestamp;
+
         if(!started || ended){return;}
 
         if(block.timestamp >= endTime){
             
-            lastTime = endTime;
+            stamp = endTime;
             ended = true;
         }
 
         LTotal = totalStaked;
-        period = block.timestamp - lastTime;
+        period = stamp - lastTime;
 
         for(uint i; i < list.length; i++){
 
@@ -190,21 +199,27 @@ contract DynamicStaking {
 
         delete LTotal;
         delete period;
-        lastTime = block.timestamp;
+        lastTime = stamp;
     }
 
     function ProcessReward(address who) internal view returns (uint reward) {
 
         uint percent = stakedBalance[who]*1e23/LTotal;
 
-        reward = yieldPerBlock*period*percent/100000;
+        reward = (yieldPerBlock*period*percent/100000)/1e18;
     }
 
     function ProcessRewardALT(address who) internal view returns (uint reward) {
 
         uint percent = stakedBalance[who]*1e23/totalStaked;
+        uint stamp = block.timestamp;
 
-        reward = yieldPerBlock*(block.timestamp - lastTime)*percent/100000;
+        if(block.timestamp >= endTime){
+            
+            stamp = endTime;
+        }
+
+        reward = (yieldPerBlock*(stamp - lastTime)*percent/100000)/1e18;
     }
 
     function GetReward(address who) public view returns(uint reward){
