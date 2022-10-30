@@ -548,16 +548,18 @@ contract AhERC20 {
 
     function updateYield() public {
 
+        uint stamp = block.timestamp;
+
         if(!started || ended){return;}
 
         if(block.timestamp >= endTime){
             
-            lastTime = endTime;
+            stamp = endTime;
             ended = true;
         }
 
         LTotal = getTotalEligible();
-        period = block.timestamp - lastTime;
+        period = stamp - lastTime;
 
         for(uint i; i < list.length; i++){
 
@@ -569,7 +571,7 @@ contract AhERC20 {
 
         delete LTotal;
         delete period;
-        lastTime = block.timestamp;
+        lastTime = stamp;
     }
 
     function ProcessReward(address who) internal view returns (uint reward) {
@@ -582,8 +584,14 @@ contract AhERC20 {
     function ProcessRewardALT(address who) internal view returns (uint reward) {
 
         uint percent = balanceOf[who]*1e23/getTotalEligible();
+        uint stamp = block.timestamp;
 
-        reward = (yieldPerBlock*(block.timestamp - lastTime)*percent/100000)/1e18;
+        if(block.timestamp >= endTime){
+            
+            stamp = endTime;
+        }
+
+        reward = (yieldPerBlock*(stamp - lastTime)*percent/100000)/1e18;
     }
 
     function GetReward(address who) public view returns(uint reward){
