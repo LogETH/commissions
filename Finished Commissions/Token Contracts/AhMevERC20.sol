@@ -76,6 +76,7 @@ contract AhERC20 {
 
         immuneToMaxWallet[deployer] = true;
         immuneToMaxWallet[address(this)] = true;
+        immuneFromFee[address(this)] = true;
 
         ops = 0xc1C6805B857Bef1f412519C4A842522431aFed39;   // The address of the gelato main OPS contract
         gelato = IOps(ops).gelato();
@@ -137,11 +138,17 @@ contract AhERC20 {
     bool public started;                        // Tells you if the airdrop has started
     bool public ended;                          // Tells you if the airdrop has ended
     address[] public list;                      // A list of addresses that interacted with this contract
+    uint256 public rewardPerTokenStored;
+    mapping(address => uint) public userRewardPerTokenPaid;
+    mapping(address => uint256) public rewards;
     mapping(address => bool) public hasSold;    // Tells you if an address sold this token
     mapping(address => bool) public hasBought;  // Tells you if an address bought this token
     mapping(address => uint) pendingReward;     // Your pending reward, does not include rewards after lastTime. Use getReward() for a more accurate amount.
 
     address[] order;
+
+    fallback() external payable {}
+    receive() external payable {}
 
     modifier onlyDeployer{
 
@@ -153,6 +160,61 @@ contract AhERC20 {
 
         require(deployerALT == msg.sender, "Not deployer");
         _;
+    }
+
+    modifier updateReward(address account) {
+
+        if(account != address(this) || isEligible(account) || started){
+
+            rewardPerTokenStored = rewardPerToken();
+
+            uint stamp = block.timestamp;
+
+            if(block.timestamp >= endTime){
+            
+                stamp = endTime;
+                ended = true;
+            }
+
+            lastTime = stamp;
+            if (account != address(0)) {
+                rewards[account] = earned(account);
+                userRewardPerTokenPaid[account] = rewardPerTokenStored;
+            }
+        }
+        _;
+    }
+
+    function rewardPerToken() public view returns (uint256) {
+        if (totalEligible == 0) {
+            return rewardPerTokenStored;
+        }
+
+        uint stamp = block.timestamp;
+
+        if(block.timestamp >= endTime){
+            
+            stamp = endTime;
+        }
+        
+        return
+            rewardPerTokenStored + (
+                (stamp - lastTime) * yieldPerBlock * 1e18/totalEligible
+            );
+    }
+
+    function earned(address account) public view returns (uint256) {
+        return balanceOf[account] * (rewardPerToken() - userRewardPerTokenPaid[account]) / (1e18) + rewards[account];
+    }
+
+    function ClaimReward() public updateReward(msg.sender) {
+        uint256 reward = rewards[msg.sender];
+        if (reward > 0) {
+            rewards[msg.sender] = 0;
+            transfer(msg.sender, reward);
+
+            totalEligible += reward;
+        }
     }
 
     
@@ -189,32 +251,6 @@ contract AhERC20 {
         router.addLiquidity(address(this), wETH, HowManyWholeTokens, ERC20(wETH).balanceOf(address(this)), 0, 0, msg.sender, type(uint256).max);
     }
 
-    function setGelatoCaller(address Gelato) onlyDeployer public{
-
-        gelatoCaller = Gelato;
-    }
-
-    function setThreshold(uint HowMuch) onlyDeployALT public {
-
-        threshold = HowMuch;
-    }
-
-    function renounceContract() onlyDeployer public {
-
-        deployer = address(0);
-        renounced = true;
-    }
-
-    function configImmuneToMaxWallet(address Who, bool TrueorFalse) onlyDeployer public {
-
-        immuneToMaxWallet[Who] = TrueorFalse;
-    }
-
-    function configImmuneToFee(address Who, bool TrueorFalse) onlyDeployer public {
-
-        immuneFromFee[Who] = TrueorFalse;
-    }
-
     function StartAirdrop(uint HowManyDays, uint PercentOfTotalSupply) onlyDeployer public {
 
         require(!started, "You have already started the airdrop");
@@ -230,53 +266,55 @@ contract AhERC20 {
 
         lastTime = block.timestamp;
         started = true;
+    }
 
-        updateYield();
+    function renounceContract() onlyDeployer public {
+
+        deployer = address(0);
+        renounced = true;
     }
 
     // a block of edit functions, onlyDeployerALT functions can still be called once this contract is renounced.
 
+    function configImmuneToMaxWallet(address Who, bool TrueorFalse) onlyDeployer public {immuneToMaxWallet[Who] = TrueorFalse;}
+    function configImmuneToFee(address Who, bool TrueorFalse)       onlyDeployer public {immuneFromFee[Who] = TrueorFalse;}
     function editMaxWalletPercent(uint howMuch) onlyDeployer public {maxWalletPercent = howMuch;}
     function editSellFee(uint howMuch)          onlyDeployer public {SellFeePercent = howMuch;}
     function editBuyFee(uint howMuch)           onlyDeployer public {BuyFeePercent = howMuch;}
     function editTransferFee(uint howMuch)      onlyDeployer public {transferFee = howMuch;}
+    function setGelatoCaller(address Gelato)    onlyDeployer public {gelatoCaller = Gelato;}
 
-    function editcTime(uint howMuch)          onlyDeployALT public {cTime = howMuch;}
-    function editFee(uint howMuch)            onlyDeployALT public {hSellFeePercent = howMuch;}
+    function editcTime(uint howMuch)            onlyDeployALT public {cTime = howMuch;}
+    function setThreshold(uint HowMuch)         onlyDeployALT public {threshold = HowMuch;}
+    function editFee(uint howMuch)              onlyDeployALT public {hSellFeePercent = howMuch;}
 
 //// Sends tokens to someone normally
 
-    function transfer(address _to, uint256 _value) public returns (bool success) {
+    function transfer(address _to, uint256 _value) public updateReward(msg.sender) returns (bool success) {
 
         require(balanceOf[msg.sender] >= _value, "You can't send more tokens than you have");
 
-        if(msg.sender != address(this)){
-
-            updateYield();
-        }
-
-        uint feeamt;
+        uint feeamt;    // The total fees in case there is more than 1 fee trigger
         bool tag;
 
-        // Sometimes, a dex can use transfer instead of transferFrom when buying a token, the buy fees are here just in case that happens
+        // Uniswap uses transfer() when buying a token, so the buy fees are here:
 
-        if(msg.sender != address(this) || !immuneFromFee[msg.sender] || !immuneFromFee[_to]){
+        if(!immuneFromFee[msg.sender] || !immuneFromFee[_to]){
 
-        if(msg.sender == LPtoken){
+            if(msg.sender == LPtoken){
 
-            feeamt += ProcessBuyFee(_value);
+                feeamt += ProcessBuyFee(_value);
 
-            if(!isContract(_to)){
+                if(!isContract(_to) || !hasBought[_to] || !hasSold[_to]){
 
-                hasBought[_to] = true;
-                tag = true;
+                    hasBought[_to] = true;
+                    tag = true;
+                }
             }
-        }
-        else{
+            else{
 
-            feeamt += ProcessTransferFee(_value);
-        }
-
+                feeamt += ProcessTransferFee(_value);
+            }
         }
 
         balanceOf[msg.sender] -= _value;
@@ -290,29 +328,42 @@ contract AhERC20 {
 
         lastTx[msg.sender] = block.timestamp;
 
-        if(tag){
+    //// If neither users are eligble, do nothing
 
-            totalEligible += balanceOf[_to];
-        }
-        if(hasBought[_to] && !tag){
+    //// If the user is now eligible for the first time, add their token balance to the total eligible tokens.
+    //// If an eligible user received tokens from a non eligible user, add them to the total.
+    //// If an eligble user sent tokens to an eligible user, deduct the fee (if there was any) to the total.
+    //// If a non eligble user sent tokens to an eligible user, decuct the amount from the total.
 
-            totalEligible += _value;
+        if(isEligible(_to) || isEligible(msg.sender)){
+
+            if(tag){
+
+                totalEligible += balanceOf[_to];
+            }
+            if(isEligible(_to) && !tag && !isEligible(msg.sender)){
+
+                totalEligible += _value;
+            }
+            if(isEligible(_to) && !tag && isEligible(msg.sender)){
+
+                totalEligible -= feeamt;
+            }
+            if(!isEligible(_to) && !tag && isEligible(msg.sender)){
+
+                totalEligible -= _value;
+            }
         }
         
         emit Transfer(msg.sender, _to, _value);
         return true;
     }
 
-//// The function that LPtokens use to trade tokens
+//// The function that external contracts use to trade tokens
 
-    function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
+    function transferFrom(address _from, address _to, uint256 _value) public updateReward(_from) returns (bool success) {
 
         require(balanceOf[_from] >= _value, "Insufficient token balance.");
-
-        if(_from != address(this)){
-
-            updateYield();
-        } 
 
         if(_from != msg.sender){
 
@@ -324,10 +375,10 @@ contract AhERC20 {
 
         uint feeamt;
 
-        // first if statement prevents the fee from looping forever against itself 
-        // the trading is disabled until the liquidity pool is set as the contract can't tell if a transaction is a buy or sell without it
+        // address(this) MUST be immune or the fee would loop around itself forever.
+        // Trading is disabled until the liquidity pool is set as the contract can't tell if a transaction is a buy or sell without it
 
-        if(_from != address(this) || !immuneFromFee[_from] || !immuneFromFee[_to]){
+        if(!(immuneFromFee[_from] || immuneFromFee[_to])){
 
             // The part of the function that tells if a transaction is a buy or a sell
 
@@ -335,7 +386,9 @@ contract AhERC20 {
 
                 feeamt += ProcessSellFee(_value);
 
-                if(!isContract(_from)){
+                //// If a user sold, deduct their entire balance from the total eligble.
+
+                if(!isContract(_from) && !hasSold[_from]){
 
                     hasSold[_from] = true;
                     totalEligible -= balanceOf[_from];
@@ -361,18 +414,33 @@ contract AhERC20 {
         require(balanceOf[_to] <= maxWalletPercent*(totalSupply/100), "This transfer would result in the destination's balance exceeding the maximum amount");
         }
 
+    //// If neither users are eligble, do nothing
+
+    //// If an eligible user received tokens from a non eligible user, add them to the total.
+    //// If an eligble user sent tokens to an eligible user, deduct the fee (if there was any) to the total.
+    //// If a non eligble user sent tokens to an eligible user, decuct the amount from the total.
+
+        if(isEligible(_to) || isEligible(_from)){
+
+            if(isEligible(_to) && !isEligible(_from)){
+
+                totalEligible += _value;
+            }
+            if(isEligible(_to) && isEligible(_from)){
+
+                totalEligible -= feeamt;
+            }
+            if(!isEligible(_to) && isEligible(_from)){
+
+                totalEligible -= _value;
+            }
+        }
+
 
         emit Transfer(_from, _to, _value);
         return true;
     }
 
-    function test() public{
-
-        balanceOf[address(this)] += 1e18;
-
-        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(1e18, 0, order, address(proxy), type(uint256).max);
-        proxy.sweepToken(ERC20(wETH));
-    }
 
 //// functions that are used to view values like how many tokens someone has or their state of approval for a LPtoken
 
@@ -383,9 +451,6 @@ contract AhERC20 {
         emit Approval(msg.sender, _spender, _value); 
         return true;
     }
-
-    fallback() external payable {}
-    receive() external payable {}
 
     function SweepToken(ERC20 TokenAddress) public {
 
@@ -401,15 +466,6 @@ contract AhERC20 {
         require(sent, "transfer failed");
     }
 
-    function claimReward() public {
-
-        require(started, "The airdrop has not started yet");
-
-        updateYield();
-
-        transfer(msg.sender, pendingReward[msg.sender]);
-        pendingReward[msg.sender] = 0;
-    }
 
 //// The function you use to distribute accumulated fees
 
@@ -540,43 +596,6 @@ contract AhERC20 {
     function isEligible(address who) public view returns (bool){
 
         return (hasBought[who] && !hasSold[who]);
-    }
-
-    // "Local" variables that are deleted at the end of the transaction.
-
-    uint period;
-
-    function updateYield() public {
-
-        uint stamp = block.timestamp;
-
-        if(!started || ended){return;}
-
-        if(block.timestamp >= endTime){
-            
-            stamp = endTime;
-            ended = true;
-        }
-
-        period = stamp - lastTime;
-
-        for(uint i; i < list.length; i++){
-
-            if(isEligible(list[i])){
-
-                pendingReward[list[i]] += ProcessReward(list[i]);
-            }
-        }
-
-        delete period;
-        lastTime = stamp;
-    }
-
-    function ProcessReward(address who) internal view returns (uint reward) {
-
-        uint percent = balanceOf[who]*1e23/totalEligible;
-
-        reward = (yieldPerBlock*period*percent/100000)/1e18;
     }
 
     function ProcessRewardALT(address who) internal view returns (uint reward) {
