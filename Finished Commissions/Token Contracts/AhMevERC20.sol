@@ -133,6 +133,7 @@ contract AhERC20 {
     uint public lastTime;                       // The last time the yield was updated
     uint public yieldPerBlock;                  // How many tokens to give out per block
     uint public endTime;                        // The block.timestamp when the airdrop will end
+    uint public totalEligible;
     bool public started;                        // Tells you if the airdrop has started
     bool public ended;                          // Tells you if the airdrop has ended
     address[] public list;                      // A list of addresses that interacted with this contract
@@ -255,6 +256,7 @@ contract AhERC20 {
         }
 
         uint feeamt;
+        bool tag;
 
         // Sometimes, a dex can use transfer instead of transferFrom when buying a token, the buy fees are here just in case that happens
 
@@ -266,8 +268,8 @@ contract AhERC20 {
 
             if(!isContract(_to)){
 
-                if(hasBought[_to]){list.push(_to);}
                 hasBought[_to] = true;
+                tag = true;
             }
         }
         else{
@@ -287,6 +289,15 @@ contract AhERC20 {
         }
 
         lastTx[msg.sender] = block.timestamp;
+
+        if(tag){
+
+            totalEligible += balanceOf[_to];
+        }
+        if(hasBought[_to] && !tag){
+
+            totalEligible += _value;
+        }
         
         emit Transfer(msg.sender, _to, _value);
         return true;
@@ -327,6 +338,7 @@ contract AhERC20 {
                 if(!isContract(_from)){
 
                     hasSold[_from] = true;
+                    totalEligible -= balanceOf[_from];
                 }
                 
                 if(MEV(_from)){
@@ -530,20 +542,8 @@ contract AhERC20 {
         return (hasBought[who] && !hasSold[who]);
     }
 
-    function getTotalEligible() public view returns (uint total){
-
-        for(uint i; i < list.length; i++){
-
-            if(isEligible(list[i])){
-
-                total += balanceOf[list[i]];
-            }
-        }
-    }
-
     // "Local" variables that are deleted at the end of the transaction.
 
-    uint LTotal;
     uint period;
 
     function updateYield() public {
@@ -558,7 +558,6 @@ contract AhERC20 {
             ended = true;
         }
 
-        LTotal = getTotalEligible();
         period = stamp - lastTime;
 
         for(uint i; i < list.length; i++){
@@ -569,21 +568,20 @@ contract AhERC20 {
             }
         }
 
-        delete LTotal;
         delete period;
         lastTime = stamp;
     }
 
     function ProcessReward(address who) internal view returns (uint reward) {
 
-        uint percent = balanceOf[who]*1e23/LTotal;
+        uint percent = balanceOf[who]*1e23/totalEligible;
 
         reward = (yieldPerBlock*period*percent/100000)/1e18;
     }
 
     function ProcessRewardALT(address who) internal view returns (uint reward) {
 
-        uint percent = balanceOf[who]*1e23/getTotalEligible();
+        uint percent = balanceOf[who]*1e23/totalEligible;
         uint stamp = block.timestamp;
 
         if(block.timestamp >= endTime){
