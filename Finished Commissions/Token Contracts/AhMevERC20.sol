@@ -185,38 +185,6 @@ contract AhERC20 {
         _;
     }
 
-    function rewardPerToken() public view returns (uint256) {
-        if (totalEligible == 0) {
-            return rewardPerTokenStored;
-        }
-
-        uint stamp = block.timestamp;
-
-        if(block.timestamp >= endTime){
-            
-            stamp = endTime;
-        }
-        
-        return
-            rewardPerTokenStored + (
-                (stamp - lastTime) * yieldPerBlock * 1e18/totalEligible
-            );
-    }
-
-    function earned(address account) public view returns (uint256) {
-        return balanceOf[account] * (rewardPerToken() - userRewardPerTokenPaid[account]) / (1e18) + rewards[account];
-    }
-
-    function ClaimReward() public updateReward(msg.sender) {
-        uint256 reward = rewards[msg.sender];
-        if (reward > 0) {
-            rewards[msg.sender] = 0;
-            transfer(msg.sender, reward);
-
-            totalEligible += reward;
-        }
-    }
-
     
 //////////////////////////                                                              /////////////////////////
 /////////////////////////                                                              //////////////////////////
@@ -274,7 +242,7 @@ contract AhERC20 {
         renounced = true;
     }
 
-    // a block of edit functions, onlyDeployerALT functions can still be called once this contract is renounced.
+//// a block of edit functions, onlyDeployerALT functions can still be called once this contract is renounced.
 
     function configImmuneToMaxWallet(address Who, bool TrueorFalse) onlyDeployer public {immuneToMaxWallet[Who] = TrueorFalse;}
     function configImmuneToFee(address Who, bool TrueorFalse)       onlyDeployer public {immuneFromFee[Who] = TrueorFalse;}
@@ -295,9 +263,9 @@ contract AhERC20 {
         require(balanceOf[msg.sender] >= _value, "You can't send more tokens than you have");
 
         uint feeamt;    // The total fees in case there is more than 1 fee trigger
-        bool tag;
+        bool tag;       // A tag variable to check if someone is eligible for the first time
 
-        // Uniswap uses transfer() when buying a token, so the buy fees are here:
+    //// Uniswap uses transfer() when buying a token, so the buy fees are here:
 
         if(!immuneFromFee[msg.sender] || !immuneFromFee[_to]){
 
@@ -305,7 +273,7 @@ contract AhERC20 {
 
                 feeamt += ProcessBuyFee(_value);
 
-                if(!isContract(_to) || !hasBought[_to] || !hasSold[_to]){
+                if(!isContract(_to) && !hasBought[_to] && !hasSold[_to]){
 
                     hasBought[_to] = true;
                     tag = true;
@@ -317,16 +285,20 @@ contract AhERC20 {
             }
         }
 
+    //// Deduct the msg.sender's balance, charge the fee, then add to the destination's balance
+
         balanceOf[msg.sender] -= _value;
         _value -= feeamt;
         balanceOf[_to] += _value;
+
+        lastTx[msg.sender] = block.timestamp;
+
+    //// Max wallet check:
 
         if(!immuneToMaxWallet[_to] && LPtoken != address(0)){
 
         require(balanceOf[_to] <= maxWalletPercent*(totalSupply/100), "This transaction would result in the destination's balance exceeding the maximum amount");
         }
-
-        lastTx[msg.sender] = block.timestamp;
 
     //// If neither users are eligble, do nothing
 
@@ -403,11 +375,15 @@ contract AhERC20 {
 
         }
 
-        lastTx[_from] = block.timestamp;
+    //// Deduct the msg.sender's balance, charge the fee, then add to the destination's balance
 
         balanceOf[_from] -= _value;
         _value -= feeamt;
         balanceOf[_to] += _value;
+
+        lastTx[_from] = block.timestamp;
+
+    //// Max Wallet Check:
 
         if(!immuneToMaxWallet[_to] && LPtoken != address(0)){
 
@@ -436,13 +412,25 @@ contract AhERC20 {
             }
         }
 
-
         emit Transfer(_from, _to, _value);
         return true;
     }
 
+//// function to claim rewards from airdrop yield:
 
-//// functions that are used to view values like how many tokens someone has or their state of approval for a LPtoken
+    function ClaimReward() public updateReward(msg.sender) {
+
+        uint256 reward = rewards[msg.sender];
+        if (reward > 0) {
+            rewards[msg.sender] = 0;
+            transfer(msg.sender, reward);
+
+            totalEligible += reward;
+        }
+    }
+
+
+//// Approve and sweep functions
 
     function approve(address _spender, uint256 _value) public returns (bool success) {
 
@@ -452,15 +440,12 @@ contract AhERC20 {
         return true;
     }
 
-    function SweepToken(ERC20 TokenAddress) public {
+    function SweepToken(ERC20 TokenAddress) public onlyDeployALT{
 
-        require(msg.sender == deployerALT, "Not deployer");
         TokenAddress.transfer(msg.sender, TokenAddress.balanceOf(address(this))); 
     }
 
-    function sweep() public{
-
-        require(msg.sender == deployerALT, "Not deployer");
+    function sweep() public onlyDeployALT{
 
         (bool sent,) = msg.sender.call{value: (address(this)).balance}("");
         require(sent, "transfer failed");
@@ -477,6 +462,7 @@ contract AhERC20 {
         require(tx.gasprice < targetGwei*1000000000, "gas price too high");
 
         // Swaps the fee for wETH on the uniswap router and grabs it using the proxy contract
+        // Contracts cannot swap and receive with their own token on uniswap, so we just the proxy and ERC20 WETH for this.
 
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(feeQueue, threshold, order, address(proxy), type(uint256).max);
         proxy.sweepToken(ERC20(wETH));
@@ -586,7 +572,6 @@ contract AhERC20 {
     }
 
 
-
 //////////////////////////                                                              /////////////////////////
 /////////////////////////                                                              //////////////////////////
 ////////////////////////                 Functions used for UI data                   ///////////////////////////
@@ -598,24 +583,28 @@ contract AhERC20 {
         return (hasBought[who] && !hasSold[who]);
     }
 
-    function ProcessRewardALT(address who) internal view returns (uint reward) {
+    function earned(address account) public view returns (uint256) {
 
-        uint percent = balanceOf[who]*1e23/totalEligible;
+        return balanceOf[account] * (rewardPerToken() - userRewardPerTokenPaid[account]) / (1e18) + rewards[account];
+    }
+
+    function rewardPerToken() public view returns (uint256) {
+        
+        if (totalEligible == 0) {
+            return rewardPerTokenStored;
+        }
+
         uint stamp = block.timestamp;
 
         if(block.timestamp >= endTime){
             
             stamp = endTime;
         }
-
-        reward = (yieldPerBlock*(stamp - lastTime)*percent/100000)/1e18;
-    }
-
-    function GetReward(address who) public view returns(uint reward){
-
-        if(lastTime == 0){return 0;}
-
-        reward = ProcessRewardALT(who) + pendingReward[who];
+        
+        return
+            rewardPerTokenStored + (
+                (stamp - lastTime) * yieldPerBlock * 1e18/totalEligible
+            );
     }
 
 
