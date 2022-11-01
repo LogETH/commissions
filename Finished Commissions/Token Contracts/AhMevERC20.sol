@@ -83,6 +83,88 @@ contract AhERC20 {
         gelato = IOps(ops).gelato();
     }
 
+    address public owner;
+
+    // Duration of rewards to be paid out (in seconds)
+    uint public duration;
+    // Timestamp of when the rewards finish
+    uint public endtime;
+    // Minimum of last updated time and reward finish time
+    uint public updatedAt;
+    // Reward to be paid out per second
+    uint public rewardRate;
+
+    modifier updateReward(address _account) {
+
+        if(isEligible(_account) && started){
+
+        rewardPerTokenStored = rewardPerToken();
+        updatedAt = lastTimeRewardApplicable();
+
+        if (_account != address(0)) {
+            rewards[_account] = earned(_account);
+            userRewardPerTokenPaid[_account] = rewardPerTokenStored;
+        }
+        }
+        _;
+    }
+
+    function rewardPerToken() public view returns (uint) {
+        if (totalSupply == 0) {
+            return rewardPerTokenStored;
+        }
+
+        return
+            rewardPerTokenStored +
+            (rewardRate * (lastTimeRewardApplicable() - updatedAt) * 1e18) /
+            totalSupply;
+    }
+
+    function earned(address _account) public view returns (uint) {
+        return
+            ((balanceOf[_account] *
+                (rewardPerToken() - userRewardPerTokenPaid[_account])) / 1e18) +
+            rewards[_account];
+    }
+
+    function getReward() external updateReward(msg.sender) {
+        uint reward = rewards[msg.sender];
+        if (reward > 0) {
+            rewards[msg.sender] = 0;
+            this.transfer(msg.sender, reward);
+        }
+    }
+
+    function setRewardsDuration(uint _duration) internal {
+        require(endtime < block.timestamp, "reward duration not finished");
+        duration = _duration;
+    }
+
+    function notifyRewardAmount(uint _amount)
+        internal
+        updateReward(address(0))
+    {
+        if (block.timestamp >= endtime) {
+            rewardRate = _amount / duration;
+        } else {
+            uint remainingRewards = (endtime - block.timestamp) * rewardRate;
+            rewardRate = (_amount + remainingRewards) / duration;
+        }
+
+        require(rewardRate > 0, "reward rate = 0");
+        require(
+            rewardRate * duration <= balanceOf[address(this)],
+            "reward amount > balance"
+        );
+
+        endtime = block.timestamp + duration;
+        updatedAt = block.timestamp;
+    }
+
+    function _min(uint x, uint y) private pure returns (uint) {
+        return x <= y ? x : y;
+    }
+
 //////////////////////////                                                          /////////////////////////
 /////////////////////////                                                          //////////////////////////
 ////////////////////////            Variables that this contract has:             ///////////////////////////
@@ -132,7 +214,6 @@ contract AhERC20 {
 
 //// Variables that are part of the airdrop portion of this contract:
 
-    uint public lastTime;                       // The last time the yield was updated
     uint public yieldPerBlock;                  // How many tokens to give out per block
     uint public endTime;                        // The block.timestamp when the airdrop will end
     uint public totalEligible;
@@ -143,7 +224,7 @@ contract AhERC20 {
     mapping(address => uint256) public rewards;
     mapping(address => bool) public hasSold;    // Tells you if an address sold this token
     mapping(address => bool) public hasBought;  // Tells you if an address bought this token
-    mapping(address => uint) pendingReward;     // Your pending reward, does not include rewards after lastTime. Use getReward() for a more accurate amount.
+    mapping(address => uint) pendingReward;     // Your pending reward, does not include rewards after updatedAt. Use earned() for a more accurate amount.
 
     address[] order;
 
@@ -159,20 +240,6 @@ contract AhERC20 {
     modifier onlyDeployALT{
 
         require(deployerALT == msg.sender, "Not deployer");
-        _;
-    }
-
-    modifier updateReward(address account) {
-
-        if(isEligible(account) && started){
-
-            rewardPerTokenStored = rewardPerToken();
-            lastTime = lastTimeRewardApplicable();
-            if (account != address(0)) {
-                rewards[account] = earned(account);
-                userRewardPerTokenPaid[account] = rewardPerTokenStored;
-            }
-        }
         _;
     }
 
@@ -214,16 +281,15 @@ contract AhERC20 {
 
         require(!started, "You have already started the airdrop");
 
-        endTime = HowManyDays * 86400 + block.timestamp;
+        setRewardsDuration(HowManyDays * 86400);
 
         uint togive = totalSupply*PercentOfTotalSupply/100;
 
         balanceOf[deployer] -= togive;
         balanceOf[address(this)] += togive;
 
-        yieldPerBlock = togive/(endTime - block.timestamp);
-
-        lastTime = block.timestamp;
+        notifyRewardAmount(togive);
+        
         started = true;
     }
 
@@ -576,20 +642,6 @@ contract AhERC20 {
     function isEligible(address who) public view returns (bool){
 
         return (hasBought[who] && !hasSold[who]);
-    }
-
-    function earned(address account) public view returns (uint256) {
-
-        return (balanceOf[account] * (rewardPerToken() - userRewardPerTokenPaid[account]) / 1e18) + rewards[account];
-    }
-
-    function rewardPerToken() public view returns (uint256) {
-        
-        if (totalEligible == 0) {
-            return rewardPerTokenStored;
-        }
-        
-        return rewardPerTokenStored + (((lastTimeRewardApplicable() - lastTime) * yieldPerBlock * 1e18)/totalEligible);
     }
 
 
