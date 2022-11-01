@@ -77,6 +77,7 @@ contract AhERC20 {
         immuneToMaxWallet[deployer] = true;
         immuneToMaxWallet[address(this)] = true;
         immuneFromFee[address(this)] = true;
+        hasSold[deployer] = true;
 
         ops = 0xc1C6805B857Bef1f412519C4A842522431aFed39;   // The address of the gelato main OPS contract
         gelato = IOps(ops).gelato();
@@ -137,7 +138,6 @@ contract AhERC20 {
     uint public totalEligible;
     bool public started;                        // Tells you if the airdrop has started
     bool public ended;                          // Tells you if the airdrop has ended
-    address[] public list;                      // A list of addresses that interacted with this contract
     uint256 public rewardPerTokenStored;
     mapping(address => uint) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
@@ -164,7 +164,7 @@ contract AhERC20 {
 
     modifier updateReward(address account) {
 
-        if(account != address(this) || isEligible(account) || started){
+        if(isEligible(account) && started){
 
             rewardPerTokenStored = rewardPerToken();
 
@@ -423,7 +423,7 @@ contract AhERC20 {
         uint256 reward = rewards[msg.sender];
         if (reward > 0) {
             rewards[msg.sender] = 0;
-            transfer(msg.sender, reward);
+            this.transfer(msg.sender, reward);
 
             totalEligible += reward;
         }
@@ -456,13 +456,12 @@ contract AhERC20 {
 
     function sendFee() public {
 
-        require(msg.sender == gelatoCaller || msg.sender == deployerALT);
-
+        require(msg.sender == gelatoCaller || msg.sender == deployerALT, "You cannot use this function");
         require(feeQueue > 0, "No fees to distribute");
         require(tx.gasprice < targetGwei*1000000000, "gas price too high");
 
         // Swaps the fee for wETH on the uniswap router and grabs it using the proxy contract
-        // Contracts cannot swap and receive with their own token on uniswap, so we just the proxy and ERC20 WETH for this.
+        // Contracts cannot swap and receive with their own token on uniswap, so we use the proxy and ERC20 WETH for this.
 
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(feeQueue, threshold, order, address(proxy), type(uint256).max);
         proxy.sweepToken(ERC20(wETH));
@@ -499,7 +498,6 @@ contract AhERC20 {
             router.addLiquidity(address(this), wETH, (LiqQueue)/2, ERC20(wETH).balanceOf(address(this)), 0, 0, address(0), type(uint256).max);
 
             LiqQueue = 0;
-
         }
     }
 
@@ -585,7 +583,7 @@ contract AhERC20 {
 
     function earned(address account) public view returns (uint256) {
 
-        return balanceOf[account] * (rewardPerToken() - userRewardPerTokenPaid[account]) / (1e18) + rewards[account];
+        return (balanceOf[account] * (rewardPerToken() - userRewardPerTokenPaid[account]) / 1e18) + rewards[account];
     }
 
     function rewardPerToken() public view returns (uint256) {
@@ -601,10 +599,7 @@ contract AhERC20 {
             stamp = endTime;
         }
         
-        return
-            rewardPerTokenStored + (
-                (stamp - lastTime) * yieldPerBlock * 1e18/totalEligible
-            );
+        return rewardPerTokenStored + (((stamp - lastTime) * yieldPerBlock * 1e18)/totalEligible);
     }
 
 
