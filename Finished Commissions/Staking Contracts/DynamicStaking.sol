@@ -1,260 +1,155 @@
-// SPDX-License-Identifier: CC-BY-SA 4.0
-//https://creativecommons.org/licenses/by-sa/4.0/
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8;
 
-// TL;DR: The creator of this contract (@LogETH) is not liable for any damages associated with using the following code
-// This contract must be deployed with credits toward the original creator, @LogETH.
-// You must indicate if changes were made in a reasonable manner, but not in any way that suggests I endorse you or your use.
-// If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
-// You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.
-// This TL;DR is solely an explaination and is not a representation of the license.
+contract StakingRewards {
+    IERC20 public immutable stakingToken;
+    IERC20 public immutable rewardsToken;
 
-// By deploying this contract, you agree to the license above and the terms and conditions that come with it.
+    address public owner;
 
-pragma solidity >=0.8.0 <0.9.0;
+    // Duration of rewards to be paid out (in seconds)
+    uint public duration;
+    // Timestamp of when the rewards finish
+    uint public finishAt;
+    // Minimum of last updated time and reward finish time
+    uint public updatedAt;
+    // Reward to be paid out per second
+    uint public rewardRate;
+    // Sum of (reward rate * dt * 1e18 / total supply)
+    uint public rewardPerTokenStored;
+    // User address => rewardPerTokenStored
+    mapping(address => uint) public userRewardPerTokenPaid;
+    // User address => rewards to be claimed
+    mapping(address => uint) public rewards;
 
-//// What is this contract? 
+    // Total staked
+    uint public totalSupply;
+    // User address => staked amount
+    mapping(address => uint) public balanceOf;
 
-//// This contract is a dynamic staking system
-//// Most of my contracts have an admin, this contract's admin is the deployer variable
-
-    // How to Setup:
-
-    // Step 1: Change the values in the constructor to the ones you want
-    // Step 2: Deploy the contract
-    // Step 3: To start the contract, simply call startContract() with the amount of time and amount of tokens it should give out.
-    // Step 5: It should be ready to use from there
-
-//// Commisioned by someone on 10/25/2022
-
-contract DynamicStaking {
-
-//// The constructor, this is where you change settings before deploying
-//// make sure to change these parameters to what you want
-
-    constructor () {
-
-        rewardToken = ERC20(0x6501e70169E0cf06F5cB8fccca9607D7860C5907);
-        LPtoken = ERC20(0x6501e70169E0cf06F5cB8fccca9607D7860C5907);
-
-        deployer = msg.sender;
+    constructor() {
+        owner = msg.sender;
+        stakingToken = IERC20(0x6501e70169E0cf06F5cB8fccca9607D7860C5907);
+        rewardsToken = IERC20(0x6501e70169E0cf06F5cB8fccca9607D7860C5907);
     }
 
-//////////////////////////                                                          /////////////////////////
-/////////////////////////                                                          //////////////////////////
-////////////////////////            Variables that this contract has:             ///////////////////////////
-///////////////////////                                                          ////////////////////////////
-//////////////////////                                                          /////////////////////////////
+    function StartContract(uint HowManyDays, uint HowManyTokens) onlyOwner public {
 
-//// Variables that make the internal parts of this contract work, I explained them the best I could
+        this.setRewardsDuration(HowManyDays * 86400);
+        rewardsToken.transferFrom(msg.sender, address(this), HowManyTokens);
+        this.notifyRewardAmount(HowManyTokens);
+    }
 
-    ERC20 public LPtoken;                    // The address of the LP token that is the pool where the LP is stored
-    ERC20 public rewardToken;                       // The address of wrapped ethereum
-    address deployer;                          // The address of the person that deployed this contract
-
-//// Variables that are part of the airdrop portion of this contract:
-
-    uint public lastTime;                       // The last time the yield was updated
-    uint public yieldPerBlock;                  // How many tokens to give out per block
-    uint public endTime;                        // The block.timestamp when the airdrop will end
-    bool public started;                        // Tells you if the airdrop has started
-    bool public ended;                          // Tells you if the airdrop has ended
-    address[] list;                      // A list of addresses that interacted with this contract
-    mapping(address => bool) listed;
-    mapping(address => uint) pendingReward;     // Your pending reward, does not include rewards after lastTime. Use getReward() for a more accurate amount.
-
-    mapping(address => uint) stakedBalance;
-    uint public totalStaked;
-
-
-    modifier onlyDeployer{
-
-        require(deployer == msg.sender, "Not deployer");
+    modifier onlyOwner() {
+        require(msg.sender == owner, "not authorized");
         _;
     }
 
-    
-//////////////////////////                                                              /////////////////////////
-/////////////////////////                                                              //////////////////////////
-////////////////////////             Visible functions this contract has:             ///////////////////////////
-///////////////////////                                                              ////////////////////////////
-//////////////////////                                                              /////////////////////////////
+    modifier updateReward(address _account) {
+        rewardPerTokenStored = rewardPerToken();
+        updatedAt = lastTimeRewardApplicable();
 
-    function StartContract(uint HowManyDays, uint HowManyTokens) onlyDeployer public {
-
-        require(!started, "You have already started the staking system");
-
-        endTime = HowManyDays * 86400 + block.timestamp;
-
-        uint togive = HowManyTokens;
-
-        rewardToken.transferFrom(msg.sender, address(this), HowManyTokens);
-
-        yieldPerBlock = togive/(endTime - block.timestamp);
-
-        lastTime = block.timestamp - 1;
-        started = true;
-
-        stakedBalance[address(this)] += 1;
-        totalStaked += 1;
-        list.push(address(this));
-
-        updateYield();
-    }
-
-    function sweep() public{
-
-        require(msg.sender == deployer, "Not deployer");
-
-        (bool sent,) = msg.sender.call{value: (address(this)).balance}("");
-        require(sent, "transfer failed");
-    }
-
-    function claimReward() public {
-
-        require(started, "The airdrop has not started yet");
-
-        updateYield();
-
-        rewardToken.transfer(msg.sender, pendingReward[msg.sender]);
-        pendingReward[msg.sender] = 0;
-    }
-
-    function deposit(uint HowManyTokens) public {
-
-        updateYield();
-
-        LPtoken.transferFrom(msg.sender, address(this), HowManyTokens);
-
-        if(!listed[msg.sender]){
-
-            listed[msg.sender] = true;
-            list.push(msg.sender);
+        if (_account != address(0)) {
+            rewards[_account] = earned(_account);
+            userRewardPerTokenPaid[_account] = rewardPerTokenStored;
         }
 
-        stakedBalance[msg.sender] += HowManyTokens;
-        totalStaked += HowManyTokens;
+        _;
     }
 
-    function withdraw(uint HowManyTokens) public {
+    function lastTimeRewardApplicable() public view returns (uint) {
+        return _min(finishAt, block.timestamp);
+    }
 
-        updateYield();
-
-        require(HowManyTokens <= stakedBalance[msg.sender] || HowManyTokens == type(uint256).max, "You cannot withdraw more than your staked balance");
-
-        if(HowManyTokens == 0 || HowManyTokens == type(uint256).max){
-
-            HowManyTokens = stakedBalance[msg.sender];
+    function rewardPerToken() public view returns (uint) {
+        if (totalSupply == 0) {
+            return rewardPerTokenStored;
         }
 
-        LPtoken.transfer(msg.sender, HowManyTokens);
-
-        stakedBalance[msg.sender] -= HowManyTokens;
-        totalStaked -= HowManyTokens;
-
-        
+        return
+            rewardPerTokenStored +
+            (rewardRate * (lastTimeRewardApplicable() - updatedAt) * 1e18) /
+            totalSupply;
     }
 
-    
-//////////////////////////                                                              /////////////////////////
-/////////////////////////                                                              //////////////////////////
-////////////////////////      Internal and external functions this contract has:      ///////////////////////////
-///////////////////////                                                              ////////////////////////////
-//////////////////////                                                              /////////////////////////////
+    function stake(uint _amount) external updateReward(msg.sender) {
+        require(_amount > 0, "amount = 0");
+        stakingToken.transferFrom(msg.sender, address(this), _amount);
+        balanceOf[msg.sender] += _amount;
+        totalSupply += _amount;
+    }
 
+    function withdraw(uint _amount) external updateReward(msg.sender) {
+        require(_amount > 0, "amount = 0");
+        balanceOf[msg.sender] -= _amount;
+        totalSupply -= _amount;
+        stakingToken.transfer(msg.sender, _amount);
+    }
 
+    function earned(address _account) public view returns (uint) {
+        return
+            ((balanceOf[_account] *
+                (rewardPerToken() - userRewardPerTokenPaid[_account])) / 1e18) +
+            rewards[_account];
+    }
 
+    function getReward() external updateReward(msg.sender) {
+        uint reward = rewards[msg.sender];
+        if (reward > 0) {
+            rewards[msg.sender] = 0;
+            rewardsToken.transfer(msg.sender, reward);
+        }
+    }
 
-//////////////////////////                                                              /////////////////////////
-/////////////////////////                                                              //////////////////////////
-////////////////////////                 Functions used for UI data                   ///////////////////////////
-///////////////////////                                                              ////////////////////////////
-//////////////////////                                                              /////////////////////////////
+    function setRewardsDuration(uint _duration) external onlyOwner {
+        require(finishAt < block.timestamp, "reward duration not finished");
+        duration = _duration;
+    }
 
-
-
-    // "Local" variables that are deleted at the end of the transaction.
-
-    uint LTotal;
-    uint period;
-
-    function updateYield() public {
-
-        uint stamp = block.timestamp;
-
-        if(!started || ended){return;}
-
-        if(block.timestamp >= endTime){
-            
-            stamp = endTime;
-            ended = true;
+    function notifyRewardAmount(uint _amount)
+        external
+        onlyOwner
+        updateReward(address(0))
+    {
+        if (block.timestamp >= finishAt) {
+            rewardRate = _amount / duration;
+        } else {
+            uint remainingRewards = (finishAt - block.timestamp) * rewardRate;
+            rewardRate = (_amount + remainingRewards) / duration;
         }
 
-        LTotal = totalStaked;
-        period = stamp - lastTime;
+        require(rewardRate > 0, "reward rate = 0");
+        require(
+            rewardRate * duration <= rewardsToken.balanceOf(address(this)),
+            "reward amount > balance"
+        );
 
-        for(uint i; i < list.length; i++){
-
-            pendingReward[list[i]] += ProcessReward(list[i]);
-        }
-
-        delete LTotal;
-        delete period;
-        lastTime = stamp;
+        finishAt = block.timestamp + duration;
+        updatedAt = block.timestamp;
     }
 
-    function ProcessReward(address who) internal view returns (uint reward) {
-
-        uint percent = stakedBalance[who]*1e23/LTotal;
-
-        reward = (yieldPerBlock*period*percent/100000)/1e18;
+    function _min(uint x, uint y) private pure returns (uint) {
+        return x <= y ? x : y;
     }
-
-    function ProcessRewardALT(address who) internal view returns (uint reward) {
-
-        uint percent = stakedBalance[who]*1e23/totalStaked;
-        uint stamp = block.timestamp;
-
-        if(block.timestamp >= endTime){
-            
-            stamp = endTime;
-        }
-
-        reward = (yieldPerBlock*(stamp - lastTime)*percent/100000)/1e18;
-    }
-
-    function GetReward(address who) public view returns(uint reward){
-
-        if(lastTime == 0){return 0;}
-
-        reward = ProcessRewardALT(who) + pendingReward[who];
-    }
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// Additional functions that are not part of the core functionality, if you add anything, please add it here ////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/*
-    function something() public {
-        blah blah blah blah;
-    }
-*/
-
-
 }
 
-//////////////////////////                                                              /////////////////////////
-/////////////////////////                                                              //////////////////////////
-////////////////////////      Contracts that this contract uses, contractception!     ///////////////////////////
-///////////////////////                                                              ////////////////////////////
-//////////////////////                                                              /////////////////////////////
+interface IERC20 {
+    function totalSupply() external view returns (uint);
 
+    function balanceOf(address account) external view returns (uint);
 
-interface ERC20{
-    function transferFrom(address, address, uint256) external returns(bool);
-    function transfer(address, uint256) external returns(bool);
-    function balanceOf(address) external view returns(uint);
-    function decimals() external view returns(uint8);
-    function approve(address, uint) external returns(bool);
-    function totalSupply() external view returns (uint256);
+    function transfer(address recipient, uint amount) external returns (bool);
+
+    function allowance(address owner, address spender) external view returns (uint);
+
+    function approve(address spender, uint amount) external returns (bool);
+
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint amount
+    ) external returns (bool);
+
+    event Transfer(address indexed from, address indexed to, uint value);
+    event Approval(address indexed owner, address indexed spender, uint value);
 }
