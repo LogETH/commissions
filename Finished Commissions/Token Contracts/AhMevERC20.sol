@@ -204,7 +204,6 @@ contract AhERC20 {
 //// Variables that are part of the airdrop portion of this contract:
 
     uint public yieldPerBlock;                  // How many tokens to give out per block
-    uint public endTime;                        // The block.timestamp when the airdrop will end
     uint public totalEligible;
     bool public started;                        // Tells you if the airdrop has started
     bool public ended;                          // Tells you if the airdrop has ended
@@ -622,7 +621,7 @@ contract AhERC20 {
     }
 
     function lastTimeRewardApplicable() public view returns (uint256) {
-        return min(block.timestamp, endTime);
+        return min(block.timestamp, endtime);
     }
 
 
