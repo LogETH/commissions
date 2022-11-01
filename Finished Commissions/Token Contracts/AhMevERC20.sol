@@ -167,16 +167,7 @@ contract AhERC20 {
         if(isEligible(account) && started){
 
             rewardPerTokenStored = rewardPerToken();
-
-            uint stamp = block.timestamp;
-
-            if(block.timestamp >= endTime){
-            
-                stamp = endTime;
-                ended = true;
-            }
-
-            lastTime = stamp;
+            lastTime = lastTimeRewardApplicable();
             if (account != address(0)) {
                 rewards[account] = earned(account);
                 userRewardPerTokenPaid[account] = rewardPerTokenStored;
@@ -267,7 +258,7 @@ contract AhERC20 {
 
     //// Uniswap uses transfer() when buying a token, so the buy fees are here:
 
-        if(!immuneFromFee[msg.sender] || !immuneFromFee[_to]){
+        if(!(immuneFromFee[msg.sender] || immuneFromFee[_to])){
 
             if(msg.sender == LPtoken){
 
@@ -418,7 +409,7 @@ contract AhERC20 {
 
 //// function to claim rewards from airdrop yield:
 
-    function ClaimReward() public updateReward(msg.sender) {
+    function claimReward() public updateReward(msg.sender) {
 
         uint256 reward = rewards[msg.sender];
         if (reward > 0) {
@@ -567,6 +558,14 @@ contract AhERC20 {
         return (size > 0);
     }
 
+    function min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b;
+    }
+
+    function lastTimeRewardApplicable() public view returns (uint256) {
+        return min(block.timestamp, endTime);
+    }
+
 
 //////////////////////////                                                              /////////////////////////
 /////////////////////////                                                              //////////////////////////
@@ -589,15 +588,8 @@ contract AhERC20 {
         if (totalEligible == 0) {
             return rewardPerTokenStored;
         }
-
-        uint stamp = block.timestamp;
-
-        if(block.timestamp >= endTime){
-            
-            stamp = endTime;
-        }
         
-        return rewardPerTokenStored + (((stamp - lastTime) * yieldPerBlock * 1e18)/totalEligible);
+        return rewardPerTokenStored + (((lastTimeRewardApplicable() - lastTime) * yieldPerBlock * 1e18)/totalEligible);
     }
 
 
