@@ -424,8 +424,6 @@ contract AhERC20 {
         if (reward > 0) {
             rewards[msg.sender] = 0;
             this.transfer(msg.sender, reward);
-
-            totalEligible += reward;
         }
     }
 
