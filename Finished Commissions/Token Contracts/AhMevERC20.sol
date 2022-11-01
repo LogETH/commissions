@@ -83,17 +83,6 @@ contract AhERC20 {
         gelato = IOps(ops).gelato();
     }
 
-    address public owner;
-
-    // Duration of rewards to be paid out (in seconds)
-    uint public duration;
-    // Timestamp of when the rewards finish
-    uint public endtime;
-    // Minimum of last updated time and reward finish time
-    uint public updatedAt;
-    // Reward to be paid out per second
-    uint public rewardRate;
-
     modifier updateReward(address _account) {
 
         if(isEligible(_account) && started){
@@ -110,14 +99,14 @@ contract AhERC20 {
     }
 
     function rewardPerToken() public view returns (uint) {
-        if (totalSupply == 0) {
+        if (totalEligible == 0) {
             return rewardPerTokenStored;
         }
 
         return
             rewardPerTokenStored +
             (rewardRate * (lastTimeRewardApplicable() - updatedAt) * 1e18) /
-            totalSupply;
+            totalEligible;
     }
 
     function earned(address _account) public view returns (uint) {
@@ -225,6 +214,10 @@ contract AhERC20 {
     mapping(address => bool) public hasSold;    // Tells you if an address sold this token
     mapping(address => bool) public hasBought;  // Tells you if an address bought this token
     mapping(address => uint) pendingReward;     // Your pending reward, does not include rewards after updatedAt. Use earned() for a more accurate amount.
+    uint public duration;                       // Duration of rewards to be paid out (in seconds)
+    uint public endtime;                        // Timestamp of when the rewards finish
+    uint public updatedAt;                      // Minimum of last updated time and reward finish time
+    uint public rewardRate;                     // Reward to be paid out per second
 
     address[] order;
 
