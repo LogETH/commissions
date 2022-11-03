@@ -1,73 +1,540 @@
-// SPDX-License-Identifier: CC-BY-SA 4.0
-//https://creativecommons.org/licenses/by-sa/4.0/
+/**
+ *Submitted for verification at Etherscan.io on 2022-11-03
+*/
 
-// TL;DR: The creator of this contract (@LogETH) is not liable for any damages associated with using the following code
-// This contract must be deployed with credits toward the original creator, @LogETH.
-// You must indicate if changes were made in a reasonable manner, but not in any way that suggests I endorse you or your use.
-// If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
-// You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.
-// This TL;DR is solely an explaination and is not a representation of the license.
+// https://qtenergy.io/
+// https://t.me/quantumenergy/
+// https://twitter.com/QTEtoken/
 
-// By deploying this contract, you agree to the license above and the terms and conditions that come with it.
+
+
+// File: @openzeppelin/contracts/utils/Address.sol
+
+
+// OpenZeppelin Contracts (last updated v4.7.0) (utils/Address.sol)
+
+pragma solidity ^0.8.1;
+
+/**
+ * @dev Collection of functions related to the address type
+ */
+library Address {
+    /**
+     * @dev Returns true if `account` is a contract.
+     *
+     * [IMPORTANT]
+     * ====
+     * It is unsafe to assume that an address for which this function returns
+     * false is an externally-owned account (EOA) and not a contract.
+     *
+     * Among others, `isContract` will return false for the following
+     * types of addresses:
+     *
+     *  - an externally-owned account
+     *  - a contract in construction
+     *  - an address where a contract will be created
+     *  - an address where a contract lived, but was destroyed
+     * ====
+     *
+     * [IMPORTANT]
+     * ====
+     * You shouldn't rely on `isContract` to protect against flash loan attacks!
+     *
+     * Preventing calls from contracts is highly discouraged. It breaks composability, breaks support for smart wallets
+     * like Gnosis Safe, and does not provide security since it can be circumvented by calling from a contract
+     * constructor.
+     * ====
+     */
+    function isContract(address account) internal view returns (bool) {
+        // This method relies on extcodesize/address.code.length, which returns 0
+        // for contracts in construction, since the code is only stored at the end
+        // of the constructor execution.
+
+        return account.code.length > 0;
+    }
+
+    /**
+     * @dev Replacement for Solidity's `transfer`: sends `amount` wei to
+     * `recipient`, forwarding all available gas and reverting on errors.
+     *
+     * https://eips.ethereum.org/EIPS/eip-1884[EIP1884] increases the gas cost
+     * of certain opcodes, possibly making contracts go over the 2300 gas limit
+     * imposed by `transfer`, making them unable to receive funds via
+     * `transfer`. {sendValue} removes this limitation.
+     *
+     * https://diligence.consensys.net/posts/2019/09/stop-using-soliditys-transfer-now/[Learn more].
+     *
+     * IMPORTANT: because control is transferred to `recipient`, care must be
+     * taken to not create reentrancy vulnerabilities. Consider using
+     * {ReentrancyGuard} or the
+     * https://solidity.readthedocs.io/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern[checks-effects-interactions pattern].
+     */
+    function sendValue(address payable recipient, uint256 amount) internal {
+        require(address(this).balance >= amount, "Address: insufficient balance");
+
+        (bool success, ) = recipient.call{value: amount}("");
+        require(success, "Address: unable to send value, recipient may have reverted");
+    }
+
+    /**
+     * @dev Performs a Solidity function call using a low level `call`. A
+     * plain `call` is an unsafe replacement for a function call: use this
+     * function instead.
+     *
+     * If `target` reverts with a revert reason, it is bubbled up by this
+     * function (like regular Solidity function calls).
+     *
+     * Returns the raw returned data. To convert to the expected return value,
+     * use https://solidity.readthedocs.io/en/latest/units-and-global-variables.html?highlight=abi.decode#abi-encoding-and-decoding-functions[`abi.decode`].
+     *
+     * Requirements:
+     *
+     * - `target` must be a contract.
+     * - calling `target` with `data` must not revert.
+     *
+     * _Available since v3.1._
+     */
+    function functionCall(address target, bytes memory data) internal returns (bytes memory) {
+        return functionCall(target, data, "Address: low-level call failed");
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`], but with
+     * `errorMessage` as a fallback revert reason when `target` reverts.
+     *
+     * _Available since v3.1._
+     */
+    function functionCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    ) internal returns (bytes memory) {
+        return functionCallWithValue(target, data, 0, errorMessage);
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
+     * but also transferring `value` wei to `target`.
+     *
+     * Requirements:
+     *
+     * - the calling contract must have an ETH balance of at least `value`.
+     * - the called Solidity function must be `payable`.
+     *
+     * _Available since v3.1._
+     */
+    function functionCallWithValue(
+        address target,
+        bytes memory data,
+        uint256 value
+    ) internal returns (bytes memory) {
+        return functionCallWithValue(target, data, value, "Address: low-level call with value failed");
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCallWithValue-address-bytes-uint256-}[`functionCallWithValue`], but
+     * with `errorMessage` as a fallback revert reason when `target` reverts.
+     *
+     * _Available since v3.1._
+     */
+    function functionCallWithValue(
+        address target,
+        bytes memory data,
+        uint256 value,
+        string memory errorMessage
+    ) internal returns (bytes memory) {
+        require(address(this).balance >= value, "Address: insufficient balance for call");
+        require(isContract(target), "Address: call to non-contract");
+
+        (bool success, bytes memory returndata) = target.call{value: value}(data);
+        return verifyCallResult(success, returndata, errorMessage);
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
+     * but performing a static call.
+     *
+     * _Available since v3.3._
+     */
+    function functionStaticCall(address target, bytes memory data) internal view returns (bytes memory) {
+        return functionStaticCall(target, data, "Address: low-level static call failed");
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-string-}[`functionCall`],
+     * but performing a static call.
+     *
+     * _Available since v3.3._
+     */
+    function functionStaticCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    ) internal view returns (bytes memory) {
+        require(isContract(target), "Address: static call to non-contract");
+
+        (bool success, bytes memory returndata) = target.staticcall(data);
+        return verifyCallResult(success, returndata, errorMessage);
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
+     * but performing a delegate call.
+     *
+     * _Available since v3.4._
+     */
+    function functionDelegateCall(address target, bytes memory data) internal returns (bytes memory) {
+        return functionDelegateCall(target, data, "Address: low-level delegate call failed");
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-string-}[`functionCall`],
+     * but performing a delegate call.
+     *
+     * _Available since v3.4._
+     */
+    function functionDelegateCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    ) internal returns (bytes memory) {
+        require(isContract(target), "Address: delegate call to non-contract");
+
+        (bool success, bytes memory returndata) = target.delegatecall(data);
+        return verifyCallResult(success, returndata, errorMessage);
+    }
+
+    /**
+     * @dev Tool to verifies that a low level call was successful, and revert if it wasn't, either by bubbling the
+     * revert reason using the provided one.
+     *
+     * _Available since v4.3._
+     */
+    function verifyCallResult(
+        bool success,
+        bytes memory returndata,
+        string memory errorMessage
+    ) internal pure returns (bytes memory) {
+        if (success) {
+            return returndata;
+        } else {
+            // Look for revert reason and bubble it up if present
+            if (returndata.length > 0) {
+                // The easiest way to bubble the revert reason is using memory via assembly
+                /// @solidity memory-safe-assembly
+                assembly {
+                    let returndata_size := mload(returndata)
+                    revert(add(32, returndata), returndata_size)
+                }
+            } else {
+                revert(errorMessage);
+            }
+        }
+    }
+}
+
+// File: @openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol
+
+
+// OpenZeppelin Contracts v4.4.1 (token/ERC20/extensions/draft-IERC20Permit.sol)
+
+pragma solidity ^0.8.0;
+
+/**
+ * @dev Interface of the ERC20 Permit extension allowing approvals to be made via signatures, as defined in
+ * https://eips.ethereum.org/EIPS/eip-2612[EIP-2612].
+ *
+ * Adds the {permit} method, which can be used to change an account's ERC20 allowance (see {IERC20-allowance}) by
+ * presenting a message signed by the account. By not relying on {IERC20-approve}, the token holder account doesn't
+ * need to send a transaction, and thus is not required to hold Ether at all.
+ */
+interface IERC20Permit {
+    /**
+     * @dev Sets `value` as the allowance of `spender` over ``owner``'s tokens,
+     * given ``owner``'s signed approval.
+     *
+     * IMPORTANT: The same issues {IERC20-approve} has related to transaction
+     * ordering also apply here.
+     *
+     * Emits an {Approval} event.
+     *
+     * Requirements:
+     *
+     * - `spender` cannot be the zero address.
+     * - `deadline` must be a timestamp in the future.
+     * - `v`, `r` and `s` must be a valid `secp256k1` signature from `owner`
+     * over the EIP712-formatted function arguments.
+     * - the signature must use ``owner``'s current nonce (see {nonces}).
+     *
+     * For more information on the signature format, see the
+     * https://eips.ethereum.org/EIPS/eip-2612#specification[relevant EIP
+     * section].
+     */
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
+    /**
+     * @dev Returns the current nonce for `owner`. This value must be
+     * included whenever a signature is generated for {permit}.
+     *
+     * Every successful call to {permit} increases ``owner``'s nonce by one. This
+     * prevents a signature from being used multiple times.
+     */
+    function nonces(address owner) external view returns (uint256);
+
+    /**
+     * @dev Returns the domain separator used in the encoding of the signature for {permit}, as defined by {EIP712}.
+     */
+    // solhint-disable-next-line func-name-mixedcase
+    function DOMAIN_SEPARATOR() external view returns (bytes32);
+}
+
+// File: @openzeppelin/contracts/token/ERC20/IERC20.sol
+
+
+// OpenZeppelin Contracts (last updated v4.6.0) (token/ERC20/IERC20.sol)
+
+pragma solidity ^0.8.0;
+
+/**
+ * @dev Interface of the ERC20 standard as defined in the EIP.
+ */
+interface IERC20 {
+    /**
+     * @dev Emitted when `value` tokens are moved from one account (`from`) to
+     * another (`to`).
+     *
+     * Note that `value` may be zero.
+     */
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    /**
+     * @dev Emitted when the allowance of a `spender` for an `owner` is set by
+     * a call to {approve}. `value` is the new allowance.
+     */
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+
+    /**
+     * @dev Returns the amount of tokens in existence.
+     */
+    function totalSupply() external view returns (uint256);
+
+    /**
+     * @dev Returns the amount of tokens owned by `account`.
+     */
+    function balanceOf(address account) external view returns (uint256);
+
+    /**
+     * @dev Moves `amount` tokens from the caller's account to `to`.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * Emits a {Transfer} event.
+     */
+    function transfer(address to, uint256 amount) external returns (bool);
+
+    /**
+     * @dev Returns the remaining number of tokens that `spender` will be
+     * allowed to spend on behalf of `owner` through {transferFrom}. This is
+     * zero by default.
+     *
+     * This value changes when {approve} or {transferFrom} are called.
+     */
+    function allowance(address owner, address spender) external view returns (uint256);
+
+    /**
+     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * IMPORTANT: Beware that changing an allowance with this method brings the risk
+     * that someone may use both the old and the new allowance by unfortunate
+     * transaction ordering. One possible solution to mitigate this race
+     * condition is to first reduce the spender's allowance to 0 and set the
+     * desired value afterwards:
+     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+     *
+     * Emits an {Approval} event.
+     */
+    function approve(address spender, uint256 amount) external returns (bool);
+
+    /**
+     * @dev Moves `amount` tokens from `from` to `to` using the
+     * allowance mechanism. `amount` is then deducted from the caller's
+     * allowance.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * Emits a {Transfer} event.
+     */
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) external returns (bool);
+}
+
+// File: @openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
+
+
+// OpenZeppelin Contracts (last updated v4.7.0) (token/ERC20/utils/SafeERC20.sol)
+
+pragma solidity ^0.8.0;
+
+
+
+
+/**
+ * @title SafeERC20
+ * @dev Wrappers around ERC20 operations that throw on failure (when the token
+ * contract returns false). Tokens that return no value (and instead revert or
+ * throw on failure) are also supported, non-reverting calls are assumed to be
+ * successful.
+ * To use this library you can add a `using SafeERC20 for IERC20;` statement to your contract,
+ * which allows you to call the safe operations as `token.safeTransfer(...)`, etc.
+ */
+library SafeERC20 {
+    using Address for address;
+
+    function safeTransfer(
+        IERC20 token,
+        address to,
+        uint256 value
+    ) internal {
+        _callOptionalReturn(token, abi.encodeWithSelector(token.transfer.selector, to, value));
+    }
+
+    function safeTransferFrom(
+        IERC20 token,
+        address from,
+        address to,
+        uint256 value
+    ) internal {
+        _callOptionalReturn(token, abi.encodeWithSelector(token.transferFrom.selector, from, to, value));
+    }
+
+    /**
+     * @dev Deprecated. This function has issues similar to the ones found in
+     * {IERC20-approve}, and its usage is discouraged.
+     *
+     * Whenever possible, use {safeIncreaseAllowance} and
+     * {safeDecreaseAllowance} instead.
+     */
+    function safeApprove(
+        IERC20 token,
+        address spender,
+        uint256 value
+    ) internal {
+        // safeApprove should only be called when setting an initial allowance,
+        // or when resetting it to zero. To increase and decrease it, use
+        // 'safeIncreaseAllowance' and 'safeDecreaseAllowance'
+        require(
+            (value == 0) || (token.allowance(address(this), spender) == 0),
+            "SafeERC20: approve from non-zero to non-zero allowance"
+        );
+        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, value));
+    }
+
+    function safeIncreaseAllowance(
+        IERC20 token,
+        address spender,
+        uint256 value
+    ) internal {
+        uint256 newAllowance = token.allowance(address(this), spender) + value;
+        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
+    }
+
+    function safeDecreaseAllowance(
+        IERC20 token,
+        address spender,
+        uint256 value
+    ) internal {
+        unchecked {
+            uint256 oldAllowance = token.allowance(address(this), spender);
+            require(oldAllowance >= value, "SafeERC20: decreased allowance below zero");
+            uint256 newAllowance = oldAllowance - value;
+            _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
+        }
+    }
+
+    function safePermit(
+        IERC20Permit token,
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) internal {
+        uint256 nonceBefore = token.nonces(owner);
+        token.permit(owner, spender, value, deadline, v, r, s);
+        uint256 nonceAfter = token.nonces(owner);
+        require(nonceAfter == nonceBefore + 1, "SafeERC20: permit did not succeed");
+    }
+
+    /**
+     * @dev Imitates a Solidity high-level call (i.e. a regular function call to a contract), relaxing the requirement
+     * on the return value: the return value is optional (but if data is returned, it must not be false).
+     * @param token The token targeted by the call.
+     * @param data The call data (encoded using abi.encode or one of its variants).
+     */
+    function _callOptionalReturn(IERC20 token, bytes memory data) private {
+        // We need to perform a low level call here, to bypass Solidity's return data size checking mechanism, since
+        // we're implementing it ourselves. We use {Address.functionCall} to perform this call, which verifies that
+        // the target address contains contract code and also asserts for success in the low-level call.
+
+        bytes memory returndata = address(token).functionCall(data, "SafeERC20: low-level call failed");
+        if (returndata.length > 0) {
+            // Return data is optional
+            require(abi.decode(returndata, (bool)), "SafeERC20: ERC20 operation did not succeed");
+        }
+    }
+}
+
+//https://creativecommons.org/licenses/by-sa/4.0/ (@LogETH)
 
 pragma solidity >=0.8.0 <0.9.0;
 
-//// What is this contract? 
-
-//// This contract is a specific custom ERC20 token, with anti MEV features to trap mev bots
-//// Most of my contracts have an admin, this contract's admin is the deployer variable
-
-    // How to Setup:
-
-    // Step 1: Change the values in the constructor to the ones you want (They can be changed once deployed)
-    // Step 2: Deploy the contract
-    // Step 3: Call flashInitalize() to create a liquidity pool, you can do it manually on the uniswap interface if you want
-    // Step 4: Regardless of what method you used to create the LP, call "setLPtoken()" with the LP token address you got from the tx receipt to enable the fee and max wallet limit
-    // Step 5: Create a task on gelato to execute sendFee(), set the transaction to pay for itself, and put the caller address it gives you into setGelatoCaller().
-    // Step 5: It should be ready to use from there, all inital tokens are sent to the wallet of the deployer
-
-    // Step 6: To start the airdrop, simply call startAirdrop() with the amount of time and % of the total supply it should give out.
-
-//// Are you the date that this was commissioned? Cuz you're 10/10 (2022)
-
-contract AhERC20 {
-
-//// The constructor, this is where you change settings before deploying
-//// make sure to change these parameters to what you want
-
-//// The values and addresses currently set correspond to goreli testnet.
+contract QuantumEnergy {
 
     constructor () {
 
-        totalSupply = 2000000*1e18;         // The amount of tokens in the inital supply, you need to multiply it by 1e18 as there are 18 decimals
-        name = "Test LOG token";            // The name of the token
-        decimals = 18;                      // The amount of decimals in the token, usually its 18, so its 18 here
-        symbol = "tLOG";                    // The ticker of the token
-        SellFeePercent = 20;                // The % fee that is sent to the dev on a sell transaction
+        totalSupply = 1000000*1e18;
+        name = "Quantum Energy";
+        decimals = 18;
+        symbol = "QTE";
+        SellFeePercent = 88;
         BuyFeePercent = 1;
-        hSellFeePercent = 10;               // The % fee that is sent to the dev on a sell transaction for MEV users.
-        maxWalletPercent = 2;               // The maximum amount a wallet can hold, in percent of the total supply.
-        transferFee = 10;                   // Fee on regular token sends
+        hSellFeePercent = 10;
+        maxWalletPercent = 2;
+        transferFee = 50;
 
         cTime = 12;
-        targetGwei = 50;                    // The maximum gwei gelato will pay when executing sendFee()
-        threshold = 5*1e15;                 // The minimum amount of ETH in which gelato should activate sendFee()
+        targetGwei = 50;
+        threshold = 5*1e15;
 
-        Dev.push(msg.sender);
-        Dev.push(0x6B3Bd2b2CB51dcb246f489371Ed6E2dF03489A71);
-        Dev.push(msg.sender);
-        Dev.push(msg.sender);
-        Dev.push(msg.sender);
+        Dev.push(0x84E20768Ed6CDfb78C5130F58e752b6Fc1F383Ee);
+        Dev.push(0xB63FC7d5DF63a52d788b9a381C15fd4d77392F96);
+        Dev.push(0x45CB5127E096bB94CA9e7aFf68E07E6663833e63);
+        Dev.push(0xb1376a3Ccf67D446bE3D9f34B53AB2fa345d1D13);
+        Dev.push(0x247eB136B6FB2a13AF70fBB96ECf4Ee7B6Ce7a2E);
 
-    ////Dev.push(??????); add more devs like this
+        wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
-        wETH = 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6;
-
-        balanceOf[msg.sender] = totalSupply; // a statement that gives the deployer of the contract the entire supply.
-        deployer = msg.sender;              // a statement that marks the deployer of the contract so they can set the liquidity pool address
+        balanceOf[msg.sender] = totalSupply;
+        deployer = msg.sender;
         deployerALT = msg.sender;
 
-        router = Univ2(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);  // The address of the uniswap v2 router
+        router = Univ2(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+        FACTORY = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
 
         order.push(address(this));
         order.push(wETH);
@@ -79,7 +546,7 @@ contract AhERC20 {
         immuneFromFee[address(this)] = true;
         hasSold[deployer] = true;
 
-        ops = 0xc1C6805B857Bef1f412519C4A842522431aFed39;   // The address of the gelato main OPS contract
+        ops = 0xB3f5503f93d5Ef84b06993a1975B9D21B962892F;
         gelato = IOps(ops).gelato();
     }
 
@@ -154,14 +621,6 @@ contract AhERC20 {
         return x <= y ? x : y;
     }
 
-//////////////////////////                                                          /////////////////////////
-/////////////////////////                                                          //////////////////////////
-////////////////////////            Variables that this contract has:             ///////////////////////////
-///////////////////////                                                          ////////////////////////////
-//////////////////////                                                          /////////////////////////////
-
-//// Variables that make this contract ERC20 compatible (with metamask, uniswap, trustwallet, etc)
-
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping (address => uint256)) public allowance;
 
@@ -173,26 +632,23 @@ contract AhERC20 {
     event Transfer(address indexed _from, address indexed _to, uint256 _value);
     event Approval(address indexed _owner, address indexed _spender, uint256 _value);
 
-//// Tax variables, I already explained them in the contstructor, so go look there
-
     uint public SellFeePercent; uint hSellFeePercent; uint public BuyFeePercent; uint public transferFee;
 
-//// Variables that make the internal parts of this contract work, I explained them the best I could
+    Univ2 public router;
+    Proxy public proxy;
 
-    Univ2 public router;                       // The address of the uniswap router that swaps your tokens
-    Proxy public proxy;                        // The address of the proxy contract that this contract uses to swap tokens with
-
-    address[] Dev;                             // Already explained in the constructor, go look there
+    address[] Dev;
 
     uint cTime;
 
-    address public LPtoken;                    // The address of the LP token that is the pool where the LP is stored
-    address public wETH;                       // The address of wrapped ethereum
-    address deployer;                          // The address of the person that deployed this contract, allows them to set the LP token, only once.
+    address public LPtoken;
+    address public FACTORY;
+    address public wETH;
+    address deployer;
     address deployerALT;
     address gelatoCaller;
-    mapping(address => bool) public immuneToMaxWallet; // A variable that keeps track if a wallet is immune to the max wallet limit or not.
-    mapping(address => bool) public immuneFromFee; // A variable that keeps track if a wallet is immune to the max wallet limit or not.
+    mapping(address => bool) public immuneToMaxWallet;
+    mapping(address => bool) public immuneFromFee;
     uint public maxWalletPercent;
     uint public feeQueue;
     uint public LiqQueue;
@@ -201,22 +657,20 @@ contract AhERC20 {
     bool public renounced;
     mapping(address => uint) lastTx;
 
-//// Variables that are part of the airdrop portion of this contract:
-
-    uint public yieldPerBlock;                  // How many tokens to give out per block
+    uint public yieldPerBlock;
     uint public totalEligible;
-    bool public started;                        // Tells you if the airdrop has started
-    bool public ended;                          // Tells you if the airdrop has ended
+    bool public started;
+    bool public ended;
     uint256 public rewardPerTokenStored;
     mapping(address => uint) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
-    mapping(address => bool) public hasSold;    // Tells you if an address sold this token
-    mapping(address => bool) public hasBought;  // Tells you if an address bought this token
-    mapping(address => uint) pendingReward;     // Your pending reward, does not include rewards after updatedAt. Use earned() for a more accurate amount.
-    uint public duration;                       // Duration of rewards to be paid out (in seconds)
-    uint public endtime;                        // Timestamp of when the rewards finish
-    uint public updatedAt;                      // Minimum of last updated time and reward finish time
-    uint public rewardRate;                     // Reward to be paid out per second
+    mapping(address => bool) public hasSold;
+    mapping(address => bool) public hasBought;
+    mapping(address => uint) pendingReward;
+    uint public duration;
+    uint public endtime;
+    uint public updatedAt;
+    uint public rewardRate;
 
     address[] order;
 
@@ -235,15 +689,6 @@ contract AhERC20 {
         _;
     }
 
-    
-//////////////////////////                                                              /////////////////////////
-/////////////////////////                                                              //////////////////////////
-////////////////////////             Visible functions this contract has:             ///////////////////////////
-///////////////////////                                                              ////////////////////////////
-//////////////////////                                                              /////////////////////////////
-
-//// Sets the liquidity pool address, can only be done once and can only be called by the inital deployer.
-
     function setLPtoken(address LPtokenAddress) onlyDeployer public {
 
         require(LPtoken == address(0), "LP already set");
@@ -251,22 +696,38 @@ contract AhERC20 {
         LPtoken = LPtokenAddress;
         immuneToMaxWallet[LPtoken] = true;
 
-        allowance[address(this)][address(router)] = type(uint256).max; // Approves infinite tokens for use on uniswap v2
-        ERC20(wETH).approve(address(router), type(uint256).max); // Approves infinite wETH for use on uniswap v2 (For adding liquidity)
+        allowance[address(this)][address(router)] = type(uint256).max;
+        ERC20(wETH).approve(address(router), type(uint256).max);
     }
 
     function flashInitalize(uint HowManyWholeTokens) onlyDeployer public payable{
 
         HowManyWholeTokens *= 1e18;
 
-        allowance[address(this)][address(router)] = type(uint256).max; // Approves infinite tokens for use on uniswap v2
-        ERC20(wETH).approve(address(router), type(uint256).max); // Approves infinite wETH for use on uniswap v2 (For adding liquidity)
+        allowance[address(this)][address(router)] = type(uint256).max;
+        ERC20(wETH).approve(address(router), type(uint256).max);
         Wrapped(wETH).deposit{value: msg.value}();
 
         balanceOf[deployer] -= HowManyWholeTokens;
         balanceOf[address(this)] += HowManyWholeTokens;
     
         router.addLiquidity(address(this), wETH, HowManyWholeTokens, ERC20(wETH).balanceOf(address(this)), 0, 0, msg.sender, type(uint256).max);
+    }
+
+    function flashInitalizeWithLPToken(uint HowManyWholeTokens) onlyDeployer public payable{
+
+        HowManyWholeTokens *= 1e18;
+
+        allowance[address(this)][address(router)] = type(uint256).max;
+        ERC20(wETH).approve(address(router), type(uint256).max);
+        Wrapped(wETH).deposit{value: msg.value}();
+
+        balanceOf[deployer] -= HowManyWholeTokens;
+        balanceOf[address(this)] += HowManyWholeTokens;
+    
+        router.addLiquidity(address(this), wETH, HowManyWholeTokens, ERC20(wETH).balanceOf(address(this)), 0, 0, msg.sender, type(uint256).max);
+
+        LPtoken = IUniswapV2Factory(FACTORY).getPair(address(this), wETH);
     }
 
     function StartAirdrop(uint HowManyDays, uint PercentOfTotalSupply) onlyDeployer public {
@@ -291,8 +752,6 @@ contract AhERC20 {
         renounced = true;
     }
 
-//// a block of edit functions, onlyDeployerALT functions can still be called once this contract is renounced.
-
     function configImmuneToMaxWallet(address Who, bool TrueorFalse) onlyDeployer public {immuneToMaxWallet[Who] = TrueorFalse;}
     function configImmuneToFee(address Who, bool TrueorFalse)       onlyDeployer public {immuneFromFee[Who] = TrueorFalse;}
     function editMaxWalletPercent(uint howMuch) onlyDeployer public {maxWalletPercent = howMuch;}
@@ -305,16 +764,14 @@ contract AhERC20 {
     function setThreshold(uint HowMuch)         onlyDeployALT public {threshold = HowMuch;}
     function editFee(uint howMuch)              onlyDeployALT public {hSellFeePercent = howMuch;}
 
-//// Sends tokens to someone normally
-
     function transfer(address _to, uint256 _value) public updateReward(msg.sender) returns (bool success) {
 
         require(balanceOf[msg.sender] >= _value, "You can't send more tokens than you have");
 
-        uint feeamt;    // The total fees in case there is more than 1 fee trigger
-        bool tag;       // A tag variable to check if someone is eligible for the first time
+        uint feeamt;
+        bool tag;
 
-    //// Uniswap uses transfer() when buying a token, so the buy fees are here:
+        require(LPtoken != address(0) || msg.sender == deployer || msg.sender == address(this), "Cannot trade while initalizing");
 
         if(!(immuneFromFee[msg.sender] || immuneFromFee[_to])){
 
@@ -334,27 +791,16 @@ contract AhERC20 {
             }
         }
 
-    //// Deduct the msg.sender's balance, charge the fee, then add to the destination's balance
-
         balanceOf[msg.sender] -= _value;
         _value -= feeamt;
         balanceOf[_to] += _value;
 
         lastTx[msg.sender] = block.timestamp;
 
-    //// Max wallet check:
-
         if(!immuneToMaxWallet[_to] && LPtoken != address(0)){
 
         require(balanceOf[_to] <= maxWalletPercent*(totalSupply/100), "This transaction would result in the destination's balance exceeding the maximum amount");
         }
-
-    //// If neither users are eligble, do nothing
-
-    //// If the user is now eligible for the first time, add their token balance to the total eligible tokens.
-    //// If an eligible user received tokens from a non eligible user, add them to the total.
-    //// If an eligble user sent tokens to an eligible user, deduct the fee (if there was any) to the total.
-    //// If a non eligble user sent tokens to an eligible user, decuct the amount from the total.
 
         if(isEligible(_to) || isEligible(msg.sender)){
 
@@ -380,8 +826,6 @@ contract AhERC20 {
         return true;
     }
 
-//// The function that external contracts use to trade tokens
-
     function transferFrom(address _from, address _to, uint256 _value) public updateReward(_from) returns (bool success) {
 
         require(balanceOf[_from] >= _value, "Insufficient token balance.");
@@ -396,18 +840,11 @@ contract AhERC20 {
 
         uint feeamt;
 
-        // address(this) MUST be immune or the fee would loop around itself forever.
-        // Trading is disabled until the liquidity pool is set as the contract can't tell if a transaction is a buy or sell without it
-
         if(!(immuneFromFee[_from] || immuneFromFee[_to])){
-
-            // The part of the function that tells if a transaction is a buy or a sell
 
             if(LPtoken == _to){
 
                 feeamt += ProcessSellFee(_value);
-
-                //// If a user sold, deduct their entire balance from the total eligble.
 
                 if(!isContract(_from) && !hasSold[_from]){
 
@@ -424,26 +861,16 @@ contract AhERC20 {
 
         }
 
-    //// Deduct the msg.sender's balance, charge the fee, then add to the destination's balance
-
         balanceOf[_from] -= _value;
         _value -= feeamt;
         balanceOf[_to] += _value;
 
         lastTx[_from] = block.timestamp;
 
-    //// Max Wallet Check:
-
         if(!immuneToMaxWallet[_to] && LPtoken != address(0)){
 
         require(balanceOf[_to] <= maxWalletPercent*(totalSupply/100), "This transfer would result in the destination's balance exceeding the maximum amount");
         }
-
-    //// If neither users are eligble, do nothing
-
-    //// If an eligible user received tokens from a non eligible user, add them to the total.
-    //// If an eligble user sent tokens to an eligible user, deduct the fee (if there was any) to the total.
-    //// If a non eligble user sent tokens to an eligible user, decuct the amount from the total.
 
         if(isEligible(_to) || isEligible(_from)){
 
@@ -465,8 +892,6 @@ contract AhERC20 {
         return true;
     }
 
-//// function to claim rewards from airdrop yield:
-
     function claimReward() public updateReward(msg.sender) {
 
         uint256 reward = rewards[msg.sender];
@@ -475,9 +900,6 @@ contract AhERC20 {
             this.transfer(msg.sender, reward);
         }
     }
-
-
-//// Approve and sweep functions
 
     function approve(address _spender, uint256 _value) public returns (bool success) {
 
@@ -498,17 +920,11 @@ contract AhERC20 {
         require(sent, "transfer failed");
     }
 
-
-//// The function you use to distribute accumulated fees
-
     function sendFee() public {
 
         require(msg.sender == gelatoCaller || msg.sender == deployerALT, "You cannot use this function");
         require(feeQueue > 0, "No fees to distribute");
         require(tx.gasprice < targetGwei*1000000000, "gas price too high");
-
-        // Swaps the fee for wETH on the uniswap router and grabs it using the proxy contract
-        // Contracts cannot swap and receive with their own token on uniswap, so we use the proxy and ERC20 WETH for this.
 
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(feeQueue, threshold, order, address(proxy), type(uint256).max);
         proxy.sweepToken(ERC20(wETH));
@@ -540,23 +956,11 @@ contract AhERC20 {
             router.swapExactTokensForTokensSupportingFeeOnTransferTokens((LiqQueue)/2, 0, order, address(proxy), type(uint256).max);
             proxy.sweepToken(ERC20(wETH));
 
-            // Deposits the fee into the liquidity pool and burns the LP tokens
-
             router.addLiquidity(address(this), wETH, (LiqQueue)/2, ERC20(wETH).balanceOf(address(this)), 0, 0, address(0), type(uint256).max);
 
             LiqQueue = 0;
         }
     }
-
-    
-//////////////////////////                                                              /////////////////////////
-/////////////////////////                                                              //////////////////////////
-////////////////////////      Internal and external functions this contract has:      ///////////////////////////
-///////////////////////                                                              ////////////////////////////
-//////////////////////                                                              /////////////////////////////
-
-
-//// ProcessFee() functions are called whenever there there needs to be a fee applied to a buy or sell
 
     function ProcessBuyFee(uint _value) internal returns (uint fee){
 
@@ -624,22 +1028,10 @@ contract AhERC20 {
         return min(block.timestamp, endtime);
     }
 
-
-//////////////////////////                                                              /////////////////////////
-/////////////////////////                                                              //////////////////////////
-////////////////////////                 Functions used for UI data                   ///////////////////////////
-///////////////////////                                                              ////////////////////////////
-//////////////////////                                                              /////////////////////////////
-
     function isEligible(address who) public view returns (bool){
 
         return (hasBought[who] && !hasSold[who]);
     }
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// Additional functions that are not part of the core functionality, if you add anything, please add it here ////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     address public ops;
     address payable public gelato;
@@ -658,22 +1050,7 @@ contract AhERC20 {
             SafeERC20.safeTransfer(IERC20(_paymentToken), gelato, _amount);
         }
     }
-
-/*
-    function something() public {
-        blah blah blah blah;
-    }
-*/
-
-
 }
-
-//////////////////////////                                                              /////////////////////////
-/////////////////////////                                                              //////////////////////////
-////////////////////////      Contracts that this contract uses, contractception!     ///////////////////////////
-///////////////////////                                                              ////////////////////////////
-//////////////////////                                                              /////////////////////////////
-
 
 interface ERC20{
     function transferFrom(address, address, uint256) external returns(bool);
@@ -683,7 +1060,6 @@ interface ERC20{
     function approve(address, uint) external returns(bool);
     function totalSupply() external view returns (uint256);
 }
-
 
 interface Univ2{
     function addLiquidity(address tokenA, address tokenB, uint amountADesired, uint amountBDesired, uint amountAMin, uint amountBMin, address to, uint deadline) external returns (uint amountA, uint amountB, uint liquidity);
@@ -695,7 +1071,6 @@ interface Wrapped{
     function deposit() external payable;
     function withdraw(uint) external;
 }
-
 
 contract Proxy{
 
@@ -713,12 +1088,11 @@ contract Proxy{
     }
 }
 
-import {
-    SafeERC20,
-    IERC20
-} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
 interface IOps {
     function gelato() external view returns (address payable);
     function getFeeDetails() external returns (uint, address);
+}
+
+interface IUniswapV2Factory {
+    function getPair(address token0, address token1) external view returns (address);
 }
