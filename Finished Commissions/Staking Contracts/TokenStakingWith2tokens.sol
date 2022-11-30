@@ -98,7 +98,7 @@ contract TokenStakingWith2tokens{
         RewardFactor = HowManyRewardTokensPerDepositTokenPerRewardPeriod; // Switches to the new reward percentage
     }
 
-    function EditRewardPeriod(uint HowLong) public{
+    function EditRewardPeriod(uint HowLong) public OnlyAdmin{
 
         rewardPeriod = HowLong;
     }
