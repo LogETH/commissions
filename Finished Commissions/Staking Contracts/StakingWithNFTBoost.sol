@@ -25,7 +25,7 @@ contract TokenStakingWith2tokens{
     // Step 4: Send some reward tokens to this contract for rewards like how you would send anyone a token and boom, it works.
 
 
-//// Commissioned by spagetti#7777 on 12/1/2022
+//// Commissioned by Jjju990#3364 on 12/1/2022
 
     // now to the code:
 
