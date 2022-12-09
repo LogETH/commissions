@@ -198,10 +198,14 @@ contract TokenStakingWith2tokens{
 
     function SaveRewards() internal {
 
-        for(uint i; user[i] != address(0); i++){
+        if(user.length != 0){
 
-            PendingReward[user[i]] += CalculateRewards(user[i]);
-            TimeStaked[user[i]] = block.timestamp;
+            for(uint i; user.length == i; i++){
+
+                PendingReward[user[i]] += CalculateRewards(user[i]);
+                TimeStaked[user[i]] = block.timestamp;
+            }
+
         }
     }
 
