@@ -63,7 +63,10 @@ contract StakingRewards {
 
     modifier requireNFT{
 
-        require(ERC721(NFT).balanceOf(msg.sender) != 0 || NFT == address(0), "An NFT is required to use this function");
+        if(NFT != address(0)){
+
+            require(ERC721(NFT).balanceOf(msg.sender) != 0, "An NFT is required to use this function");
+        }
         _;
     }
 
