@@ -14,8 +14,6 @@ contract StakingRewards {
 
         // If txCost > 0, the below has to be set, if not leave as 0x00...00
 
-        address wETH = 0x0000000000000000000000000000000000000000; // wrapped gas token.
-        address buyToken = 0x0000000000000000000000000000000000000000; // the token you would want this contract to buy back with fees.
         treasury = 0x0000000000000000000000000000000000000000; // where this contract should send the tokens it swaps.
         router = 0x0000000000000000000000000000000000000000; // the DEX router this contract should use when swapping.
 
