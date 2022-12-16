@@ -61,13 +61,6 @@ contract StakingRewards {
 
     address NFT;
 
-    function StartContract(uint HowManyDays, uint HowManyTokens) onlyOwner public {
-
-        this.setRewardsDuration(HowManyDays * 86400);
-        rewardsToken.transferFrom(msg.sender, address(this), HowManyTokens);
-        this.notifyRewardAmount(HowManyTokens);
-    }
-
     modifier requireNFT{
 
         require(ERC721(NFT).balanceOf(msg.sender) != 0 || NFT == address(0), "An NFT is required to use this function");
