@@ -19,8 +19,10 @@ contract StakingRewards {
         treasury = 0x0000000000000000000000000000000000000000; // where this contract should send the tokens it swaps.
         router = 0x0000000000000000000000000000000000000000; // the DEX router this contract should use when swapping.
 
-        path.push(wETH);
-        path.push(buyToken);
+        // Put the token path this contract should take below, for example, to trade ETH -> USDC, I would put wETH as the first token, and USDC as the second.
+
+        path.push(0x0000000000000000000000000000000000000000); // First token
+        path.push(0x0000000000000000000000000000000000000000); // Second Token
     }
 
     // to setup this contract, simply fill out the constructor, deploy, approve the rewards token for this contract, then call startContract()
