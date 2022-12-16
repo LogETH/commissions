@@ -1,36 +1,11 @@
-// SPDX-License-Identifier: CC-BY-SA 4.0
-//https://creativecommons.org/licenses/by-sa/4.0/
-
-// TL;DR: The creator of this contract (@LogETH) is not liable for any damages associated with using the following code
-// This contract must be deployed with credits toward the original creator, @LogETH.
-// You must indicate if changes were made in a reasonable manner, but not in any way that suggests I endorse you or your use.
-// If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
-// You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.
-// This TL;DR is solely an explaination and is not a representation of the license.
-
-// By deploying this contract, you agree to the license above and the terms and conditions that come with it.
+// SPDX-License-Identifier: MIT
 
 pragma solidity >=0.8.0 <0.9.0;
 
-contract TokenStakingWith2tokens{
+contract aStake{
 
-//// This contract simply enables a staking system with a reward and deposit token.
-//// THIS CONTRACT MUST BE IMMUNE TO/EXCLUDED FROM ANY FEE ON TRANSFER MECHANISMS.
-
-    // How to Setup:
-
-    // Step 1: Deploy the contract
-    // Step 2: Call EditToken() with the token address you want to use
-    // Step 3: Call EditEmission() 
-    // Step 4: Send some reward tokens to this contract for rewards like how you would send anyone a token and boom, it works.
-
-
+//// This contract is a staking system
 //// Commissioned by Jjju990#3364 on 12/1/2022
-
-    // now to the code:
-
-    // Settings that you can change before deploying (in this case, don't change anything)
-    // As you can see, it makes you the admin. The admin CANNOT be changed once set for security reasons.
 
     constructor(){
         admin = msg.sender;
@@ -49,6 +24,13 @@ contract TokenStakingWith2tokens{
 
         route.push(0x0000000000000000000000000000000000000000); // First token
         route.push(0x0000000000000000000000000000000000000000); // Second Token
+
+
+        // If you want to set the emission before this contract is deployed, do it here (The default is 0):
+
+        rewardPeriod = 0;
+        RewardFactor = 0;
+        BoostedRewardFactor = 0;
     }
 
 
@@ -118,7 +100,7 @@ contract TokenStakingWith2tokens{
 //////////////////////                                                              /////////////////////////////
 
 
-    // a block of functions that let the Admin of this contract change various settings.
+//// a block of functions that let the Admin of this contract change various settings.
 
     function EditToken(ERC20 WhatToken)         public OnlyAdmin{Token = WhatToken;}
     function EditRewardToken(ERC20 WhatToken)   public OnlyAdmin{RewardToken = WhatToken;}
@@ -146,7 +128,7 @@ contract TokenStakingWith2tokens{
         TokenAddress.transfer(admin, TokenAddress.balanceOf(address(this))); 
     }
 
-    // The Stake button stakes your tokens.
+//// Functions that normal users would use
 
     function Stake(uint amount) public payable recordReward takeFee{
 
@@ -161,8 +143,6 @@ contract TokenStakingWith2tokens{
 
         user.push(msg.sender); // Records your address to use in SaveRewards()
     }
-
-    // The Unstake Button withdraws your tokens. It does not automatically claim rewards.
 
     function Unstake(uint amount) public payable recordReward takeFee cooldown{
 
@@ -179,8 +159,10 @@ contract TokenStakingWith2tokens{
 
         require(TokensStaked[msg.sender] > 0, "No tokens staked");
 
-        RewardToken.transfer(msg.sender, PendingReward[msg.sender]);
+        uint reward = PendingReward[msg.sender];
+
         PendingReward[msg.sender] = 0;
+        RewardToken.transfer(msg.sender, reward);
     }
 
 //////////////////////////                                                              /////////////////////////
