@@ -29,7 +29,7 @@ contract RepeatingLotteryReferral{
         USDT = ERC20(0x2e1F920a4C157BD89606792081f73C6439548817); // What token this contract uses
         admin = msg.sender;
 
-        raffleDuration = 60; // How long the raffle should take
+        raffleDuration = 3 days; // How long the raffle should take
 
         //// Chainlink variables, chainlink should tell you what to put here when you make a subscription, the values here are for sepolia testnet.
 
