@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: CC-BY-SA 4.0
 //https://creativecommons.org/licenses/by-sa/4.0/
 
@@ -16,7 +15,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 contract RepeatingLotteryReferral{
 
-//// This contract is a lottery that repeats itself
+//// This contract is a referral system for a lottery that repeats itself
 
     // Instructions on how to setup the contract:
     // https://docs.google.com/document/d/1dA6kW0114xwe_flailso4VwDyUrCXknFjhqKydbBT5U/edit
