@@ -20,13 +20,13 @@ contract RepeatingLottery{
     // https://docs.google.com/document/d/1dA6kW0114xwe_flailso4VwDyUrCXknFjhqKydbBT5U/edit
 
 
-//// Commissioned by @kommissar29 on 8/18/2023
+//// Commissioned by someone on 8/18/2023
 
     // the constructor that activates when you deploy the contract, this is where you change settings before deploying.
 
     constructor(){
 
-        USDT = ERC20(0x3028335Bb5fa053805ACa3B89b8E091068d80a4E);   // What token this contract uses
+        USDT = ERC20(0x2e1F920a4C157BD89606792081f73C6439548817);   // What token this contract uses
         admin = msg.sender;                                         // Makes you the admin
 
         raffleDuration = 60 seconds;                                // How long the raffle should take
@@ -44,12 +44,12 @@ contract RepeatingLottery{
 
         //// Contract that handles referrals
 
-        refAddress = Ref(0xf30D5a37544A768FBFCb2C6b91Bfcf0d8b6E5CC5); // referral contract address
+        refAddress = Ref(0x095E3ca5b7a13c3cD75Bbdb5B4adD0a2Cbd738Fb); // referral contract address
         refMultiplier = 1;                                          // How many referral entries should one contribution give?
 
         //// Chainlink variables, chainlink should tell you what to put here when you make a subscription, the values here are for sepolia testnet.
 
-        s_subscriptionId = 4757;
+        s_subscriptionId = 4736;
         vrfCoordinator = 0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625;
         s_keyHash = 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c;
     }
@@ -107,6 +107,11 @@ contract RepeatingLottery{
     uint32 public callbackGasLimit = 200000;
     uint16 requestConfirmations = 3;
     uint32 numWords = 1;
+
+//// Events
+
+    event Contribution(address indexed _contributor, uint _numTimes, address indexed _referralAddress);
+    event WinnerDrawn(address indexed _winner, uint _amtReceived, uint numOfContributions);
 
 
 //////////////////////////                                                              /////////////////////////
@@ -172,6 +177,8 @@ contract RepeatingLottery{
 
             refAddress.enterReferral(referralAddress, HowManyTimes*refMultiplier);
         }
+
+        emit Contribution(msg.sender, HowManyTimes, referralAddress);
     }
 
     function drawWinner() public requireOpen requireNotRolling{
@@ -262,6 +269,8 @@ contract RepeatingLottery{
         winner[raffleNonce] = list[raffleNonce][randomValue];
 
         // send the winner the rest of the pot
+
+        emit WinnerDrawn(winner[raffleNonce], USDT.balanceOf(address(this)), nonce);
 
         USDT.transfer(winner[raffleNonce], USDT.balanceOf(address(this)));
 
