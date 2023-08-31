@@ -161,6 +161,17 @@ contract RepeatingLottery{
 
         USDT.transferFrom(msg.sender, address(this), cost*HowManyTimes); // Send the funds to the contract
 
+        //// Handle the fees
+
+        uint fees = (cost*HowManyTimes/100)*30; // 30% of the pot is taken as fees
+
+        USDT.transfer(taxWallet[0], (fees/1000)*233);
+        USDT.transfer(taxWallet[1], (fees/1000)*233);
+        USDT.transfer(taxWallet[2], (fees/1000)*233);
+        USDT.transfer(taxWallet[3], (fees/1000)*201);
+
+        USDT.transfer(address(refAddress), fees/10);
+
         // enter the msg.sender into the raffle as many times as they paid for.
 
         for(uint i; i < HowManyTimes; i++){
@@ -201,18 +212,7 @@ contract RepeatingLottery{
 
         rolling = true;
 
-        // Handle the fees
-
-        uint fees = (internalPot[raffleNonce]/100)*30; // 30% of the pot is taken as fees
-
-        USDT.transfer(taxWallet[0], (fees/1000)*233);
-        USDT.transfer(taxWallet[1], (fees/1000)*233);
-        USDT.transfer(taxWallet[2], (fees/1000)*233);
-        USDT.transfer(taxWallet[3], (fees/1000)*201);
-
-        USDT.transfer(address(refAddress), fees/10);
-
-        // send the winner the rest of the pot
+        // send the winner the pot
 
         //initate the random number request
         Chainlink(vrfCoordinator).requestRandomWords(
