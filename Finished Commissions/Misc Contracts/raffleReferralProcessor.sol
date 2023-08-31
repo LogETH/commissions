@@ -55,22 +55,17 @@ contract RepeatingLotteryReferral{
 
     uint public raffleNonce; // What number raffle we are on, starts at 0, you can use previous numbers to look up data about previous raffles
 
-    mapping(uint => mapping (address => bool)) public hasContributed; // Who has contributed to the raffle
     mapping(uint => mapping (uint => address)) public list;           // List of addresses in the raffle
     mapping(uint => address) public winner;                           // The winners of the raffles
     mapping(uint => uint) public endTime;                             // The time the raffle's winner is drawn
-    mapping(uint => uint) internalPot;                                // The current pot with fees added
     mapping(address => bool) raffleContract;
 
 
     uint public raffleDuration;                                 // How long the raffle lasts for
     address public admin;                                       // The address that is allowed to use admin functions
     uint public nonce;                                          // How many contributions the current raffle has received, starts at 0 so add 1 to get the true amount.
-    uint public cost;                                           // How much it costs to contribute to the pot
     bool open;                                                  // Is the raffle initalized?
-    bool limited;                                               // Whether the raffle allows for multiple entries or not.
     bool rolling;                                               // If the winner is currently being drawn, prevents the contract from accedentally drawing twice.
-    uint refMultiplier;                                         // How many entries into the referral pot should one referral give?
     
 
     
