@@ -87,7 +87,7 @@ contract RepeatingLottery{
     bool rolling;                                               // If the winner is currently being drawn, prevents the contract from accedentally drawing twice.
 
     uint public raffleDuration;                                 // How long the raffle lasts for
-    uint public nonce;                                          // How many contributions the current raffle has received, starts at 0 so add 1 to get the true amount.
+    uint public nonce;                                          // How many contributions the current raffle has received
     uint public cost;                                           // How much it costs to contribute to the pot
     uint public refMultiplier;                                  // How many entries into the referral pot should one referral give?
     uint remTime;                                               // The remaining amount of time if the raffle is paused.
@@ -265,7 +265,7 @@ contract RepeatingLottery{
 
         // roll the winner
 
-        uint256 randomValue = (randomWords[0] % (nonce + 1));
+        uint256 randomValue = (randomWords[0] % (nonce));
         winner[raffleNonce] = list[raffleNonce][randomValue];
 
         // send the winner the rest of the pot
