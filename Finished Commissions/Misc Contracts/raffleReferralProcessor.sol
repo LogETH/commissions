@@ -63,7 +63,7 @@ contract RepeatingLotteryReferral{
 
     uint public raffleDuration;                                 // How long the raffle lasts for
     address public admin;                                       // The address that is allowed to use admin functions
-    uint public nonce;                                          // How many contributions the current raffle has received, starts at 0 so add 1 to get the true amount.
+    uint public nonce;                                          // How many contributions the current raffle has received
     bool open;                                                  // Is the raffle initalized?
     bool rolling;                                               // If the winner is currently being drawn, prevents the contract from accedentally drawing twice.
     
@@ -203,7 +203,7 @@ contract RepeatingLotteryReferral{
 
         // roll the winner
 
-        uint256 randomValue = (randomWords[0] % (nonce + 1));
+        uint256 randomValue = (randomWords[0] % (nonce));
 
         winner[raffleNonce] = list[raffleNonce][randomValue];
 
