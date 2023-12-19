@@ -221,6 +221,28 @@ contract RepeatingLotteryReferral{
         rolling = false;
     }
 
+    function reverseListSearch(uint _raffleNonce, address _who) public view returns(uint amt){
+
+        uint i;
+
+        while(list[_raffleNonce][i] != address(0)){
+
+            if(list[_raffleNonce][i] == _who){amt++;}
+            i++;
+        }
+    }
+
+    function reverseListSearchCurrent(address _who) public view returns(uint amt){
+
+        uint i;
+
+        while(list[raffleNonce][i] != address(0)){
+
+            if(list[raffleNonce][i] == _who){amt++;}
+            i++;
+        }
+    }
+
 }
     
 //////////////////////////                                                              /////////////////////////
