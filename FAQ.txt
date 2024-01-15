@@ -1,6 +1,6 @@
 **What networks are your contracts compatible with?**
 Because my contracts are written in solidity, they can only be deployed onto EVM (Ethereum virtual machine) compatible networks.
-popular EVM compatible networks include: ethereum/polygon/binance smart chain/fantom/avalanche
+popular EVM compatible networks include: ethereum/polygon/binance smart chain/fantom/avalanche/optimism/arbitrum
 
 **How much do you generally charge for a contract?**
 For small and simple edits or something that would only take an hour or less I charge $10-$20.
