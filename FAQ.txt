@@ -1,1 +1,17 @@
-Placeholder, i'm currently writing it
+**What networks are your contracts compatible with?**
+Because my contracts are written in solidity, they can only be deployed onto EVM (Ethereum virtual machine) compatible networks.
+popular EVM compatible networks include: ethereum/polygon/binance smart chain/fantom/avalanche
+
+**How much do you generally charge for a contract?**
+For small and simple edits or something that would only take an hour or less I charge $10-$20.
+For a contact that would take me multiple hours I charge $40-$120.
+For a large project that would take me multiple days/a week I charge $300-$400.
+
+**How does the payment process work?**
+Once I code the contract you requested, I create a test version that you're able to use to confirm it functions as intended. Once I receive payment, I give you the source code so you're able to deploy it yourself. This ensures that I have a finished product to give you and that I receive money for it.
+
+**Am I able to request any edits during/after coding?**
+You are able to request edits at no cost, although if it's something huge that increases the workload on my end by a significant amount I may have to charge more.
+
+**Can I receive help with operating the contract after you code it?**
+Yes! You can message me anytime (I perfer discord) and I will try my best to help you with whatever you need.
