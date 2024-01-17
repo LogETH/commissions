@@ -16,6 +16,6 @@ Compensation is based on the difficulty and amount of time it would take to fini
 
 Read the FAQ file for more information
 
-To request a commission, please DM me on discord at Log#7730
+To request a commission, please DM me on discord at @sobalog 
 
 (and if you were wondering, all the animations in this repository are made by me!)
