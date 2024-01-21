@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-contract AutoTransfer{
+contract autoTransfer{
 
 //// This contract is a tool that lets you automatically transfer a token from one wallet to another
 
